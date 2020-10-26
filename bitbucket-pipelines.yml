@@ -62,16 +62,16 @@ deploy: &deploy
         - >
           if [ $BITBUCKET_BRANCH == "develop" ];
           then
-            S3_BUCKET = "dev-3beep-chat-service"
-            STACK_NAME = "Dev3beepChatService"
-            ENVIRONMENT_NAME = "Dev"
+            export S3_BUCKET = "dev-3beep-chat-service"
+            export STACK_NAME = "Dev3beepChatService"
+            export ENVIRONMENT_NAME = "Dev"
           fi
         - >
           if [ $BITBUCKET_BRANCH == "master" ];
           then
-            S3_BUCKET = "prod-3beep-chat-service"
-            STACK_NAME = "Prod3beepChatService"
-            ENVIRONMENT_NAME = "Prod"
+            export S3_BUCKET = "prod-3beep-chat-service"
+            export STACK_NAME = "Prod3beepChatService"
+            export ENVIRONMENT_NAME = "Prod"
           fi
         - echo $S3_BUCKET
         - pipe: atlassian/aws-sam-deploy:0.5.2
@@ -83,9 +83,6 @@ deploy: &deploy
             STACK_NAME: $STACK_NAME
             CAPABILITIES: ['CAPABILITY_IAM', 'CAPABILITY_NAMED_IAM', 'CAPABILITY_AUTO_EXPAND']
             SAM_TEMPLATE: 'template.yaml'
-            # CFN_TEMPLATE:
-            # TEMPLATE:
-            # COMMAND:
             STACK_PARAMETERS: >
               [{
                 "ParameterKey": "EnvironmentName",
