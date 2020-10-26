@@ -309,6 +309,7 @@ def lambda_handler(event, context):
     # Form the response structure.
     response = {
         "chatRoomId": chat_room_id,
+        "channelId": aggregated_entry["channel_id"],
         "chatRoomStatus": chat_room_status,
         "operator": internal_user
     }
