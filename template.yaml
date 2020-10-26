@@ -152,7 +152,7 @@ Resources:
     ActivateClosedChatRoom:
         Type: AWS::Serverless::Function
         Properties:
-            FunctionName: ActivateClosedChatRoom
+            FunctionName:
                 Fn::Sub: "${EnvironmentName}ActivateClosedChatRoom"
             CodeUri: src/aws_lambda_functions/activate_closed_chat_room
             Handler: lambda_function.lambda_handler
