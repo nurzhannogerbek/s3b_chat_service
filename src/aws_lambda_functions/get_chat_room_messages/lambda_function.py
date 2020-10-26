@@ -2,17 +2,15 @@ import databases
 import utils
 import logging
 import sys
-from cassandra import ConsistencyLevel
+import binascii
 from cassandra.query import SimpleStatement, dict_factory
 
-
 """
-Define connections to databases outside of the "lambda_handler" function.
-Connections to databases will be created the first time the function is called.
-Any subsequent function call will use the same database connections.
+Define the connection to the database outside of the "lambda_handler" function.
+The connection to the database will be created the first time the function is called.
+Any subsequent function call will use the same database connection.
 """
 cassandra_connection = None
-postgresql_connection = None
 
 logger = logging.getLogger(__name__)  # Create the logger with the specified name.
 logger.setLevel(logging.WARNING)  # Set the logging level of the logger.
@@ -23,7 +21,7 @@ def lambda_handler(event, context):
     :argument event: The AWS Lambda uses this parameter to pass in event data to the handler.
     :argument context: The AWS Lambda uses this parameter to provide runtime information to your handler.
     """
-    # Since connections with databases were defined outside of the function, we create global variables.
+    # Since the connection with database were defined outside of the function, we create global variables.
     global cassandra_connection
     if not cassandra_connection:
         try:
@@ -31,19 +29,14 @@ def lambda_handler(event, context):
         except Exception as error:
             logger.error(error)
             sys.exit(1)
-    global postgresql_connection
-    if not postgresql_connection:
-        try:
-            postgresql_connection = databases.create_postgresql_connection()
-        except Exception as error:
-            logger.error(error)
-            sys.exit(1)
 
     # Define the values of the data passed to the function.
-    chat_room_id = event["arguments"]["input"]['chatRoomId']
-    message_id = event["arguments"]["input"]['messageId']
-    # Available values: "message_is_delivered", "message_is_read".
-    message_status = event["arguments"]["input"]['messageStatus']
+    chat_room_id = event["arguments"]['chatRoomId']
+    fetch_size = event["arguments"]['fetchSize']
+    try:
+        paging_state = event["arguments"]['pagingState']
+    except KeyError:
+        paging_state = None
 
     # Set the name of the keyspace you will be working with.
     # This statement must fix ERROR NoHostAvailable: ('Unable to complete the operation against any hosts').
@@ -62,38 +55,9 @@ def lambda_handler(event, context):
     # Return each row as a dictionary after querying the Cassandra database.
     cassandra_connection.row_factory = dict_factory
 
-    # Prepare the CQL request that updates the status of the message.
-    cassandra_query = """
-    update
-        chat_rooms_messages
-    set
-        {0} = true
-    where
-        chat_room_id = {1}
-    and
-        message_id = {2}
-    if exists;
-    """.format(
-        message_status,
-        chat_room_id,
-        message_id
-    )
-    statement = SimpleStatement(
-        cassandra_query,
-        consistency_level=ConsistencyLevel.LOCAL_QUORUM
-    )
-
-    # Execute a previously prepared CQL query.
-    try:
-        cassandra_connection.execute(statement)
-    except Exception as error:
-        logger.error(error)
-        sys.exit(1)
-
     # Prepare the CQL query statement that returns a certain number of recent messages from a particular chat room.
     cassandra_query = '''
     select
-        chat_room_id,
         message_created_date_time,
         message_updated_date_time,
         message_deleted_date_time,
@@ -115,27 +79,51 @@ def lambda_handler(event, context):
     from
         chat_rooms_messages
     where
-        chat_room_id = {0}
-    and
-        message_id = {1}
-    limit 1;
+        chat_room_id = {0};
     '''.format(
-        chat_room_id,
-        message_id
+        chat_room_id
+    )
+    statement = SimpleStatement(
+        cassandra_query,
+        fetch_size=fetch_size
     )
 
-    # Execute a previously prepared CQL query.
     try:
-        chat_room_message_entry = cassandra_connection.execute(cassandra_query).one()
+        # You can resume the pagination when executing a new query by using the "ResultSet.paging_state".
+        if paging_state is not None:
+            # The "unhexlify" function returns the binary data represented by the hexadecimal string "hexstr".
+            chat_room_messages_entries = cassandra_connection.execute(
+                statement,
+                paging_state=binascii.unhexlify(paging_state)
+            )
+        else:
+            chat_room_messages_entries = cassandra_connection.execute(statement)
     except Exception as error:
         logger.error(error)
         sys.exit(1)
 
-    # Analyze the data about chat room message received from the database.
-    chat_room_message = dict()
-    if chat_room_message_entry is not None:
+    # Get the next paging state.
+    paging_state = chat_room_messages_entries.paging_state
+
+    # Alternative form of the ternary operator in Python. Format: (expression_on_false, expression_on_true)[predicate]
+    paging_state = (None, paging_state)[paging_state is not None]
+
+    # Define the next paging state that will be sent in the response to the client.
+    if paging_state is not None:
+        # The "hexlify" function returns the hexadecimal representation of the binary data.
+        paging_state = binascii.hexlify(paging_state).decode()
+    else:
+        paging_state = None
+
+    # Initialize empty list to store information about chat room messages.
+    chat_room_messages = list()
+
+    # Analyze the list with data about chat room messages received from the database.
+    for entry in chat_room_messages_entries.current_rows:
+        chat_room_message = dict()
         quoted_message = dict()
-        for key, value in chat_room_message_entry.items():
+        for key, value in entry.items():
+            # Convert the UUID and DateTime data types to the string.
             if ("_id" in key or "_date_time" in key) and value is not None:
                 value = str(value)
             if "quoted_" in key:
@@ -143,6 +131,11 @@ def lambda_handler(event, context):
             else:
                 chat_room_message[utils.camel_case(key)] = value
         chat_room_message["quotedMessage"] = quoted_message
+        chat_room_messages.append(chat_room_message)
 
-    # Return the the full information about chat room message as the response.
-    return chat_room_message
+    # Return the object with a list of chat room messages and the next paging state.
+    response = {
+        "pagingState": paging_state,
+        "chatRoomMessages": chat_room_messages[::-1]  # Reverse the list.
+    }
+    return response

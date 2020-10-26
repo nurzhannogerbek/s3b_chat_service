@@ -31,11 +31,11 @@ def lambda_handler(event, context):
             sys.exit(1)
 
     # Define the values of the data passed to the function.
-    channel_technical_id = event["arguments"]["input"]["channelTechnicalId"]
-    channel_type_name = event["arguments"]["input"]["channelTypeName"]
+    channel_technical_id = event["arguments"]["channelTechnicalId"]
+    channel_type_name = event["arguments"]["channelTypeName"]
     offset = event["arguments"]["currentPageNumber"]
     limit = event["arguments"]["recordsNumber"]
-    offset = (limit - 1) * offset
+    offset = (offset - 1) * limit
 
     # With a dictionary cursor, the data is sent in a form of Python dictionaries.
     cursor = postgresql_connection.cursor(cursor_factory=RealDictCursor)
