@@ -5,14 +5,17 @@ Globals:
     MemorySize: 3008
     Timeout: 900
 Parameters:
-  BackendDependenciesStackName:
-      Type: String
-      Default: BackendDependencies
+    EnvironmentName:
+        Type: String
+    BackendDependenciesStackName:
+        Type: String
+        Default: BackendDependencies
 Resources:
     GetChatRoomMessages:
         Type: AWS::Serverless::Function
         Properties:
-            FunctionName: GetChatRoomMessages
+            FunctionName:
+                Fn::Sub: "${EnvironmentName}GetChatRoomMessages"
             CodeUri: src/aws_lambda_functions/get_chat_room_messages
             Handler: lambda_function.lambda_handler
             Runtime: python3.8
@@ -20,11 +23,12 @@ Resources:
                 - Fn::ImportValue:
                     Fn::Sub: "${BackendDependenciesStackName}:Databases"
                 - Fn::ImportValue:
-                      Fn::Sub: "${BackendDependenciesStackName}:Utils"
+                    Fn::Sub: "${BackendDependenciesStackName}:Utils"
     CreateChatRoomMessage:
         Type: AWS::Serverless::Function
         Properties:
-            FunctionName: CreateChatRoomMessage
+            FunctionName:
+                Fn::Sub: "${EnvironmentName}CreateChatRoomMessage"
             CodeUri: src/aws_lambda_functions/create_chat_room_message
             Handler: lambda_function.lambda_handler
             Runtime: python3.8
@@ -32,11 +36,12 @@ Resources:
                 - Fn::ImportValue:
                     Fn::Sub: "${BackendDependenciesStackName}:Databases"
                 - Fn::ImportValue:
-                      Fn::Sub: "${BackendDependenciesStackName}:Utils"
+                    Fn::Sub: "${BackendDependenciesStackName}:Utils"
     GetChannelsTypesAndChannels:
         Type: AWS::Serverless::Function
         Properties:
-            FunctionName: GetChannelsTypesAndChannels
+            FunctionName:
+                Fn::Sub: "${EnvironmentName}GetChannelsTypesAndChannels"
             CodeUri: src/aws_lambda_functions/get_channels_types_and_channels
             Handler: lambda_function.lambda_handler
             Runtime: python3.8
@@ -44,11 +49,12 @@ Resources:
                 - Fn::ImportValue:
                     Fn::Sub: "${BackendDependenciesStackName}:Databases"
                 - Fn::ImportValue:
-                      Fn::Sub: "${BackendDependenciesStackName}:Utils"
+                    Fn::Sub: "${BackendDependenciesStackName}:Utils"
     CreateChatRoom:
         Type: AWS::Serverless::Function
         Properties:
-            FunctionName: CreateChatRoom
+            FunctionName:
+                Fn::Sub: "${EnvironmentName}CreateChatRoom"
             CodeUri: src/aws_lambda_functions/create_chat_room
             Handler: lambda_function.lambda_handler
             Runtime: python3.8
@@ -56,11 +62,12 @@ Resources:
                 - Fn::ImportValue:
                     Fn::Sub: "${BackendDependenciesStackName}:Databases"
                 - Fn::ImportValue:
-                      Fn::Sub: "${BackendDependenciesStackName}:Utils"
+                    Fn::Sub: "${BackendDependenciesStackName}:Utils"
     AssignChatRoomOperator:
         Type: AWS::Serverless::Function
         Properties:
-            FunctionName: AssignChatRoomOperator
+            FunctionName:
+                Fn::Sub: "${EnvironmentName}AssignChatRoomOperator"
             CodeUri: src/aws_lambda_functions/assign_chat_room_operator
             Handler: lambda_function.lambda_handler
             Runtime: python3.8
@@ -68,11 +75,12 @@ Resources:
                 - Fn::ImportValue:
                     Fn::Sub: "${BackendDependenciesStackName}:Databases"
                 - Fn::ImportValue:
-                      Fn::Sub: "${BackendDependenciesStackName}:Utils"
+                    Fn::Sub: "${BackendDependenciesStackName}:Utils"
     CloseChatRoom:
         Type: AWS::Serverless::Function
         Properties:
-            FunctionName: CloseChatRoom
+            FunctionName:
+                Fn::Sub: "${EnvironmentName}CloseChatRoom"
             CodeUri: src/aws_lambda_functions/close_chat_room
             Handler: lambda_function.lambda_handler
             Runtime: python3.8
@@ -80,18 +88,20 @@ Resources:
                 - Fn::ImportValue:
                     Fn::Sub: "${BackendDependenciesStackName}:Databases"
                 - Fn::ImportValue:
-                      Fn::Sub: "${BackendDependenciesStackName}:Utils"
+                    Fn::Sub: "${BackendDependenciesStackName}:Utils"
     UpdateMessageSendingStatus:
         Type: AWS::Serverless::Function
         Properties:
-            FunctionName: UpdateMessageSendingStatus
+            FunctionName:
+                Fn::Sub: "${EnvironmentName}UpdateMessageSendingStatus"
             CodeUri: src/aws_lambda_functions/update_message_sending_status
             Handler: lambda_function.lambda_handler
             Runtime: python3.8
     GetNonAcceptedChatRooms:
         Type: AWS::Serverless::Function
         Properties:
-            FunctionName: GetNonAcceptedChatRooms
+            FunctionName:
+                Fn::Sub: "${EnvironmentName}GetNonAcceptedChatRooms"
             CodeUri: src/aws_lambda_functions/get_non_accepted_chat_rooms
             Handler: lambda_function.lambda_handler
             Runtime: python3.8
@@ -99,11 +109,12 @@ Resources:
                 - Fn::ImportValue:
                     Fn::Sub: "${BackendDependenciesStackName}:Databases"
                 - Fn::ImportValue:
-                      Fn::Sub: "${BackendDependenciesStackName}:Utils"
+                    Fn::Sub: "${BackendDependenciesStackName}:Utils"
     GetChatRoomInformation:
         Type: AWS::Serverless::Function
         Properties:
-            FunctionName: GetChatRoomInformation
+            FunctionName:
+                Fn::Sub: "${EnvironmentName}GetChatRoomInformation"
             CodeUri: src/aws_lambda_functions/get_chat_room_information
             Handler: lambda_function.lambda_handler
             Runtime: python3.8
@@ -111,11 +122,12 @@ Resources:
                 - Fn::ImportValue:
                     Fn::Sub: "${BackendDependenciesStackName}:Databases"
                 - Fn::ImportValue:
-                      Fn::Sub: "${BackendDependenciesStackName}:Utils"
+                    Fn::Sub: "${BackendDependenciesStackName}:Utils"
     GetAcceptedChatRooms:
         Type: AWS::Serverless::Function
         Properties:
-            FunctionName: GetAcceptedChatRooms
+            FunctionName:
+                Fn::Sub: "${EnvironmentName}GetAcceptedChatRooms"
             CodeUri: src/aws_lambda_functions/get_accepted_chat_rooms
             Handler: lambda_function.lambda_handler
             Runtime: python3.8
@@ -123,11 +135,12 @@ Resources:
                 - Fn::ImportValue:
                     Fn::Sub: "${BackendDependenciesStackName}:Databases"
                 - Fn::ImportValue:
-                      Fn::Sub: "${BackendDependenciesStackName}:Utils"
+                    Fn::Sub: "${BackendDependenciesStackName}:Utils"
     GetCompletedChatRooms:
         Type: AWS::Serverless::Function
         Properties:
-            FunctionName: GetCompletedChatRooms
+            FunctionName:
+                Fn::Sub: "${EnvironmentName}GetCompletedChatRooms"
             CodeUri: src/aws_lambda_functions/get_completed_chat_rooms
             Handler: lambda_function.lambda_handler
             Runtime: python3.8
@@ -135,11 +148,12 @@ Resources:
                 - Fn::ImportValue:
                     Fn::Sub: "${BackendDependenciesStackName}:Databases"
                 - Fn::ImportValue:
-                      Fn::Sub: "${BackendDependenciesStackName}:Utils"
+                    Fn::Sub: "${BackendDependenciesStackName}:Utils"
     ActivateClosedChatRoom:
         Type: AWS::Serverless::Function
         Properties:
             FunctionName: ActivateClosedChatRoom
+                Fn::Sub: "${EnvironmentName}ActivateClosedChatRoom"
             CodeUri: src/aws_lambda_functions/activate_closed_chat_room
             Handler: lambda_function.lambda_handler
             Runtime: python3.8
@@ -147,11 +161,12 @@ Resources:
                 - Fn::ImportValue:
                     Fn::Sub: "${BackendDependenciesStackName}:Databases"
                 - Fn::ImportValue:
-                      Fn::Sub: "${BackendDependenciesStackName}:Utils"
+                    Fn::Sub: "${BackendDependenciesStackName}:Utils"
     UpdateMessageStatus:
         Type: AWS::Serverless::Function
         Properties:
-            FunctionName: UpdateMessageStatus
+            FunctionName:
+                Fn::Sub: "${EnvironmentName}UpdateMessageStatus"
             CodeUri: src/aws_lambda_functions/update_message_status
             Handler: lambda_function.lambda_handler
             Runtime: python3.8
@@ -159,11 +174,12 @@ Resources:
                 - Fn::ImportValue:
                     Fn::Sub: "${BackendDependenciesStackName}:Databases"
                 - Fn::ImportValue:
-                      Fn::Sub: "${BackendDependenciesStackName}:Utils"
+                    Fn::Sub: "${BackendDependenciesStackName}:Utils"
     GetChannelOnlineOperators:
         Type: AWS::Serverless::Function
         Properties:
-            FunctionName: GetChannelOnlineOperators
+            FunctionName:
+                Fn::Sub: "${EnvironmentName}GetChannelOnlineOperators"
             CodeUri: src/aws_lambda_functions/get_channel_online_operators
             Handler: lambda_function.lambda_handler
             Runtime: python3.8
@@ -171,7 +187,7 @@ Resources:
                 - Fn::ImportValue:
                     Fn::Sub: "${BackendDependenciesStackName}:Databases"
                 - Fn::ImportValue:
-                      Fn::Sub: "${BackendDependenciesStackName}:Utils"
+                    Fn::Sub: "${BackendDependenciesStackName}:Utils"
 Outputs:
     GetChatRoomMessages:
         Value:

@@ -1,0 +1,99 @@
+# Variable: AWS_ACCESS_KEY_ID
+# Usage: AWS access key.
+#
+# Variable: AWS_SECRET_ACCESS_KEY
+# Usage: AWS secret key.
+#
+# Variable: AWS_DEFAULT_REGION
+# Usage: The AWS region code (us-east-1, us-west-2, etc.) of the region containing the AWS resource(s).
+#
+# Variable: S3_BUCKET
+# Usage: The name of the AWS S3 bucket for artifacts.
+#
+# Variable: STACK_NAME
+# Usage: The name of the AWS CloudFormation stack. If the stack does not exist, it will be created.
+#
+# Variable: CAPABILITIES
+# Usage: Array of capabilities.
+#        Allowed values: [CAPABILITY_IAM, CAPABILITY_NAMED_IAM, CAPABILITY_AUTO_EXPAND].
+#
+# Variable: SAM_TEMPLATE
+# Usage: Location of the file containing a SAM template body in your repository.
+#        Default: template.yaml.
+#        Valid template body formats are: json or yaml.
+#
+# Variable: CFN_TEMPLATE
+# Usage: Name of the CloudFormation template to generate.
+#        Default: packaged.yml.
+#
+# Variable: TEMPLATE
+# Usage: Location of the file containing a packaged CloudFormation template body in your repository or a URL that points to the template hosted in an Amazon S3 bucket.
+#        Default: $BITBUCKET_PIPE_STORAGE_DIR/packaged.yml stored locally after executing the pipe with the 'package-only' or 'all' command.
+#        Valid template body formats are: json or yaml.
+#
+# Variable: COMMAND
+# Usage: Command to be executed during the deployment.
+#        Valid options are all, package-only, deploy-only.
+#        Default: all.
+#
+# Variable: STACK_PARAMETERS
+# Usage: JSON document containing variables to pass to a pipeline you want to trigger.
+#        The value should be a list of object with ParameterKey, ParameterValue fields for each of your variables.
+#        The Examples section below contains an example for passing parameters to the stack.
+#
+# Variable: WAIT
+# Usage: Wait for deployment to complete.
+#        Default: false.
+#        If false, it will finish when the cloudformation deploy is triggered and will not wait until the resources are successfully created.
+#
+# Variable: WAIT_INTERVAL
+# Usage: Time to wait between polling for deployment to complete (in seconds).
+#        Default: 30.
+#
+# Variable: DEBUG
+# Usage: Turn on extra debug information.
+#        Default: false.
+image:
+  name: python:3.8
+
+deploy: &deploy
+  - step:
+      script:
+        - >
+          if [$BITBUCKET_BRANCH=="develop"]; then
+            S3_BUCKET  = "dev-3beep-chat-service"
+            STACK_NAME = "Dev3beepChatService"
+            ENVIRONMENT_NAME = "Dev"
+          fi
+          if [$BITBUCKET_BRANCH=="master"]; then
+            S3_BUCKET  = "prod-3beep-chat-service"
+            STACK_NAME = "Prod3beepChatService"
+            ENVIRONMENT_NAME = "Prod"
+          fi
+        - pipe: atlassian/aws-sam-deploy:0.5.2
+          variables:
+            AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+            AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+            AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION
+            S3_BUCKET: ${S3_BUCKET}
+            STACK_NAME: ${STACK_NAME}
+            CAPABILITIES: ['CAPABILITY_IAM', 'CAPABILITY_NAMED_IAM', 'CAPABILITY_AUTO_EXPAND']
+            SAM_TEMPLATE: 'template.yaml'
+            # CFN_TEMPLATE:
+            # TEMPLATE:
+            # COMMAND:
+            STACK_PARAMETERS: >
+              [{
+                "ParameterKey": "EnvironmentName",
+                "ParameterValue": ${ENVIRONMENT_NAME}
+              }]
+            WAIT: 'true'
+            WAIT_INTERVAL: 60
+            DEBUG: 'true'
+
+pipelines:
+  branches:
+    develop:
+      - <<: *deploy
+    master:
+      - <<: *deploy
