@@ -59,6 +59,7 @@ image:
 deploy: &deploy
   - step:
       script:
+        - echo $BITBUCKET_BRANCH
         - >
           if [$BITBUCKET_BRANCH=="develop"]; then
             S3_BUCKET = "dev-3beep-chat-service"
@@ -71,7 +72,7 @@ deploy: &deploy
             STACK_NAME = "Prod3beepChatService"
             ENVIRONMENT_NAME = "Prod"
           fi
-        - echo {$S3_BUCKET}
+        - echo $S3_BUCKET
         - pipe: atlassian/aws-sam-deploy:0.5.2
           variables:
             AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
