@@ -1,9 +1,9 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Globals:
-  Function:
-    MemorySize: 3008
-    Timeout: 900
+    Function:
+        MemorySize: 3008
+        Timeout: 900
 Parameters:
     EnvironmentName:
         Type: String
