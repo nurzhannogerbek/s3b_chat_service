@@ -2,6 +2,7 @@ import databases
 import utils
 import logging
 import sys
+import os
 from cassandra import ConsistencyLevel
 from cassandra.query import SimpleStatement, dict_factory
 
@@ -13,6 +14,19 @@ Any subsequent function call will use the same database connections.
 """
 cassandra_connection = None
 postgresql_connection = None
+
+# Define databases settings parameters.
+CASSANDRA_USERNAME = os.environ["CASSANDRA_USERNAME"]
+CASSANDRA_PASSWORD = os.environ["CASSANDRA_PASSWORD"]
+CASSANDRA_HOST = os.environ["CASSANDRA_HOST"].split(',')
+CASSANDRA_PORT = int(os.environ["CASSANDRA_PORT"])
+CASSANDRA_LOCAL_DC = os.environ["CASSANDRA_LOCAL_DC"]
+CASSANDRA_KEYSPACE_NAME = os.environ["CASSANDRA_KEYSPACE_NAME"]
+POSTGRESQL_USERNAME = os.environ["POSTGRESQL_USERNAME"]
+POSTGRESQL_PASSWORD = os.environ["POSTGRESQL_PASSWORD"]
+POSTGRESQL_HOST = os.environ["POSTGRESQL_HOST"]
+POSTGRESQL_PORT = int(os.environ["POSTGRESQL_PORT"])
+POSTGRESQL_DB_NAME = os.environ["POSTGRESQL_DB_NAME"]
 
 logger = logging.getLogger(__name__)  # Create the logger with the specified name.
 logger.setLevel(logging.WARNING)  # Set the logging level of the logger.
@@ -27,14 +41,26 @@ def lambda_handler(event, context):
     global cassandra_connection
     if not cassandra_connection:
         try:
-            cassandra_connection = databases.create_cassandra_connection()
+            cassandra_connection = databases.create_cassandra_connection(
+                CASSANDRA_USERNAME,
+                CASSANDRA_PASSWORD,
+                CASSANDRA_HOST,
+                CASSANDRA_PORT,
+                CASSANDRA_LOCAL_DC
+            )
         except Exception as error:
             logger.error(error)
             sys.exit(1)
     global postgresql_connection
     if not postgresql_connection:
         try:
-            postgresql_connection = databases.create_postgresql_connection()
+            postgresql_connection = databases.create_postgresql_connection(
+                POSTGRESQL_USERNAME,
+                POSTGRESQL_PASSWORD,
+                POSTGRESQL_HOST,
+                POSTGRESQL_PORT,
+                POSTGRESQL_DB_NAME
+            )
         except Exception as error:
             logger.error(error)
             sys.exit(1)
@@ -50,11 +76,17 @@ def lambda_handler(event, context):
     success = False
     while not success:
         try:
-            cassandra_connection.set_keyspace(databases.cassandra_keyspace_name)
+            cassandra_connection.set_keyspace(CASSANDRA_KEYSPACE_NAME)
             success = True
         except Exception as error:
             try:
-                cassandra_connection = databases.create_cassandra_connection()
+                cassandra_connection = databases.create_cassandra_connection(
+                    CASSANDRA_USERNAME,
+                    CASSANDRA_PASSWORD,
+                    CASSANDRA_HOST,
+                    CASSANDRA_PORT,
+                    CASSANDRA_LOCAL_DC
+                )
             except Exception as error:
                 logger.error(error)
                 sys.exit(1)

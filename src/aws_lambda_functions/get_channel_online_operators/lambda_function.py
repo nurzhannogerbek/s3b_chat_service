@@ -2,6 +2,7 @@ import databases
 import utils
 import logging
 import sys
+import os
 from psycopg2.extras import RealDictCursor
 
 
@@ -11,6 +12,13 @@ The connection to database will be created the first time the function is called
 Any subsequent function call will use the same database connection.
 """
 postgresql_connection = None
+
+# Define databases settings parameters.
+POSTGRESQL_USERNAME = os.environ["POSTGRESQL_USERNAME"]
+POSTGRESQL_PASSWORD = os.environ["POSTGRESQL_PASSWORD"]
+POSTGRESQL_HOST = os.environ["POSTGRESQL_HOST"]
+POSTGRESQL_PORT = int(os.environ["POSTGRESQL_PORT"])
+POSTGRESQL_DB_NAME = os.environ["POSTGRESQL_DB_NAME"]
 
 logger = logging.getLogger(__name__)  # Create the logger with the specified name.
 logger.setLevel(logging.WARNING)  # Set the logging level of the logger.
@@ -25,7 +33,13 @@ def lambda_handler(event, context):
     global postgresql_connection
     if not postgresql_connection:
         try:
-            postgresql_connection = databases.create_postgresql_connection()
+            postgresql_connection = databases.create_postgresql_connection(
+                POSTGRESQL_USERNAME,
+                POSTGRESQL_PASSWORD,
+                POSTGRESQL_HOST,
+                POSTGRESQL_PORT,
+                POSTGRESQL_DB_NAME
+            )
         except Exception as error:
             logger.error(error)
             sys.exit(1)

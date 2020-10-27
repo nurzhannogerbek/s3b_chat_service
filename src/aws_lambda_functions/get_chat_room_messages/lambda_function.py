@@ -1,8 +1,8 @@
 import databases
 import utils
-import os
 import logging
 import sys
+import os
 import binascii
 from cassandra.query import SimpleStatement, dict_factory
 
@@ -13,9 +13,6 @@ Any subsequent function call will use the same database connection.
 """
 cassandra_connection = None
 
-logger = logging.getLogger(__name__)  # Create the logger with the specified name.
-logger.setLevel(logging.WARNING)  # Set the logging level of the logger.
-
 # Define databases settings parameters.
 CASSANDRA_USERNAME = os.environ["CASSANDRA_USERNAME"]
 CASSANDRA_PASSWORD = os.environ["CASSANDRA_PASSWORD"]
@@ -23,6 +20,9 @@ CASSANDRA_HOST = os.environ["CASSANDRA_HOST"].split(',')
 CASSANDRA_PORT = int(os.environ["CASSANDRA_PORT"])
 CASSANDRA_LOCAL_DC = os.environ["CASSANDRA_LOCAL_DC"]
 CASSANDRA_KEYSPACE_NAME = os.environ["CASSANDRA_KEYSPACE_NAME"]
+
+logger = logging.getLogger(__name__)  # Create the logger with the specified name.
+logger.setLevel(logging.WARNING)  # Set the logging level of the logger.
 
 
 def lambda_handler(event, context):
