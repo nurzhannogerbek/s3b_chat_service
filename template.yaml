@@ -7,6 +7,7 @@ Globals:
 Parameters:
     EnvironmentName:
         Type: String
+        Default: Test
     BackendDependenciesStackName:
         Type: String
         Default: BackendDependencies
@@ -21,9 +22,9 @@ Resources:
             Runtime: python3.8
             Layers:
                 - Fn::ImportValue:
-                    Fn::Sub: "${BackendDependenciesStackName}:Databases"
+                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Databases"
                 - Fn::ImportValue:
-                    Fn::Sub: "${BackendDependenciesStackName}:Utils"
+                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Utils"
     CreateChatRoomMessage:
         Type: AWS::Serverless::Function
         Properties:
@@ -34,9 +35,9 @@ Resources:
             Runtime: python3.8
             Layers:
                 - Fn::ImportValue:
-                    Fn::Sub: "${BackendDependenciesStackName}:Databases"
+                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Databases"
                 - Fn::ImportValue:
-                    Fn::Sub: "${BackendDependenciesStackName}:Utils"
+                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Utils"
     GetChannelsTypesAndChannels:
         Type: AWS::Serverless::Function
         Properties:
@@ -47,9 +48,9 @@ Resources:
             Runtime: python3.8
             Layers:
                 - Fn::ImportValue:
-                    Fn::Sub: "${BackendDependenciesStackName}:Databases"
+                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Databases"
                 - Fn::ImportValue:
-                    Fn::Sub: "${BackendDependenciesStackName}:Utils"
+                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Utils"
     CreateChatRoom:
         Type: AWS::Serverless::Function
         Properties:
@@ -60,9 +61,9 @@ Resources:
             Runtime: python3.8
             Layers:
                 - Fn::ImportValue:
-                    Fn::Sub: "${BackendDependenciesStackName}:Databases"
+                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Databases"
                 - Fn::ImportValue:
-                    Fn::Sub: "${BackendDependenciesStackName}:Utils"
+                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Utils"
     AssignChatRoomOperator:
         Type: AWS::Serverless::Function
         Properties:
@@ -73,9 +74,9 @@ Resources:
             Runtime: python3.8
             Layers:
                 - Fn::ImportValue:
-                    Fn::Sub: "${BackendDependenciesStackName}:Databases"
+                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Databases"
                 - Fn::ImportValue:
-                    Fn::Sub: "${BackendDependenciesStackName}:Utils"
+                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Utils"
     CloseChatRoom:
         Type: AWS::Serverless::Function
         Properties:
@@ -86,9 +87,9 @@ Resources:
             Runtime: python3.8
             Layers:
                 - Fn::ImportValue:
-                    Fn::Sub: "${BackendDependenciesStackName}:Databases"
+                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Databases"
                 - Fn::ImportValue:
-                    Fn::Sub: "${BackendDependenciesStackName}:Utils"
+                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Utils"
     UpdateMessageSendingStatus:
         Type: AWS::Serverless::Function
         Properties:
@@ -107,9 +108,9 @@ Resources:
             Runtime: python3.8
             Layers:
                 - Fn::ImportValue:
-                    Fn::Sub: "${BackendDependenciesStackName}:Databases"
+                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Databases"
                 - Fn::ImportValue:
-                    Fn::Sub: "${BackendDependenciesStackName}:Utils"
+                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Utils"
     GetChatRoomInformation:
         Type: AWS::Serverless::Function
         Properties:
@@ -120,9 +121,9 @@ Resources:
             Runtime: python3.8
             Layers:
                 - Fn::ImportValue:
-                    Fn::Sub: "${BackendDependenciesStackName}:Databases"
+                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Databases"
                 - Fn::ImportValue:
-                    Fn::Sub: "${BackendDependenciesStackName}:Utils"
+                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Utils"
     GetAcceptedChatRooms:
         Type: AWS::Serverless::Function
         Properties:
@@ -133,9 +134,9 @@ Resources:
             Runtime: python3.8
             Layers:
                 - Fn::ImportValue:
-                    Fn::Sub: "${BackendDependenciesStackName}:Databases"
+                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Databases"
                 - Fn::ImportValue:
-                    Fn::Sub: "${BackendDependenciesStackName}:Utils"
+                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Utils"
     GetCompletedChatRooms:
         Type: AWS::Serverless::Function
         Properties:
@@ -146,9 +147,9 @@ Resources:
             Runtime: python3.8
             Layers:
                 - Fn::ImportValue:
-                    Fn::Sub: "${BackendDependenciesStackName}:Databases"
+                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Databases"
                 - Fn::ImportValue:
-                    Fn::Sub: "${BackendDependenciesStackName}:Utils"
+                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Utils"
     ActivateClosedChatRoom:
         Type: AWS::Serverless::Function
         Properties:
@@ -159,9 +160,9 @@ Resources:
             Runtime: python3.8
             Layers:
                 - Fn::ImportValue:
-                    Fn::Sub: "${BackendDependenciesStackName}:Databases"
+                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Databases"
                 - Fn::ImportValue:
-                    Fn::Sub: "${BackendDependenciesStackName}:Utils"
+                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Utils"
     UpdateMessageStatus:
         Type: AWS::Serverless::Function
         Properties:
@@ -172,9 +173,9 @@ Resources:
             Runtime: python3.8
             Layers:
                 - Fn::ImportValue:
-                    Fn::Sub: "${BackendDependenciesStackName}:Databases"
+                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Databases"
                 - Fn::ImportValue:
-                    Fn::Sub: "${BackendDependenciesStackName}:Utils"
+                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Utils"
     GetChannelOnlineOperators:
         Type: AWS::Serverless::Function
         Properties:
@@ -185,9 +186,9 @@ Resources:
             Runtime: python3.8
             Layers:
                 - Fn::ImportValue:
-                    Fn::Sub: "${BackendDependenciesStackName}:Databases"
+                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Databases"
                 - Fn::ImportValue:
-                    Fn::Sub: "${BackendDependenciesStackName}:Utils"
+                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Utils"
 Outputs:
     GetChatRoomMessages:
         Value:
