@@ -65,6 +65,17 @@ deploy: &deploy
             export S3_BUCKET="dev-3beep-chat-service"
             export STACK_NAME="Dev3beepChatService"
             export ENVIRONMENT_NAME="Dev"
+            export CASSANDRA_USERNAME=$DEV_CASSANDRA_USERNAME
+            export CASSANDRA_PASSWORD=$DEV_CASSANDRA_PASSWORD
+            export CASSANDRA_HOST=$DEV_CASSANDRA_HOST
+            export CASSANDRA_PORT=$DEV_CASSANDRA_PORT
+            export CASSANDRA_LOCAL_DC=$DEV_CASSANDRA_LOCAL_DC
+            export CASSANDRA_KEYSPACE_NAME=$DEV_CASSANDRA_KEYSPACE_NAME
+            export POSTGRESQL_USERNAME=$DEV_POSTGRESQL_USERNAME
+            export POSTGRESQL_PASSWORD=$DEV_POSTGRESQL_PASSWORD
+            export POSTGRESQL_HOST=$DEV_POSTGRESQL_HOST
+            export POSTGRESQL_PORT=$DEV_POSTGRESQL_PORT
+            export POSTGRESQL_DB_NAME=$DEV_POSTGRESQL_DB_NAME
           fi
         - >
           if [ $BITBUCKET_BRANCH == "master" ];
@@ -72,6 +83,17 @@ deploy: &deploy
             export S3_BUCKET="prod-3beep-chat-service"
             export STACK_NAME="Prod3beepChatService"
             export ENVIRONMENT_NAME="Prod"
+            export CASSANDRA_USERNAME=$PROD_CASSANDRA_USERNAME
+            export CASSANDRA_PASSWORD=$PROD_CASSANDRA_PASSWORD
+            export CASSANDRA_HOST=$PROD_CASSANDRA_HOST
+            export CASSANDRA_PORT=$PROD_CASSANDRA_PORT
+            export CASSANDRA_LOCAL_DC=$PROD_CASSANDRA_LOCAL_DC
+            export CASSANDRA_KEYSPACE_NAME=$PROD_CASSANDRA_KEYSPACE_NAME
+            export POSTGRESQL_USERNAME=$PROD_POSTGRESQL_USERNAME
+            export POSTGRESQL_PASSWORD=$PROD_POSTGRESQL_PASSWORD
+            export POSTGRESQL_HOST=$PROD_POSTGRESQL_HOST
+            export POSTGRESQL_PORT=$PROD_POSTGRESQL_PORT
+            export POSTGRESQL_DB_NAME=$PROD_POSTGRESQL_DB_NAME
           fi
         - pipe: atlassian/aws-sam-deploy:0.5.2
           variables:
@@ -83,10 +105,56 @@ deploy: &deploy
             CAPABILITIES: ['CAPABILITY_IAM', 'CAPABILITY_NAMED_IAM', 'CAPABILITY_AUTO_EXPAND']
             SAM_TEMPLATE: 'template.yaml'
             STACK_PARAMETERS: >
-              [{
-                "ParameterKey": "EnvironmentName",
-                "ParameterValue": ${ENVIRONMENT_NAME}
-              }]
+              [
+                {
+                  "ParameterKey": "EnvironmentName",
+                  "ParameterValue": ${ENVIRONMENT_NAME}
+                },
+                {
+                  "ParameterKey": "CassandraUsername",
+                  "ParameterValue": ${CASSANDRA_USERNAME}
+                },
+                {
+                  "ParameterKey": "CassandraPassword",
+                  "ParameterValue": ${CASSANDRA_PASSWORD}
+                },
+                {
+                  "ParameterKey": "CassandraHost",
+                  "ParameterValue": ${CASSANDRA_HOST}
+                },
+                {
+                  "ParameterKey": "CassandraPort",
+                  "ParameterValue": "9142"
+                },
+                {
+                  "ParameterKey": "CassandraLocalDC",
+                  "ParameterValue": ${CASSANDRA_LOCAL_DC}
+                },
+                {
+                  "ParameterKey": "CassandraKeyspaceName",
+                  "ParameterValue": ${CASSANDRA_KEYSPACE_NAME}
+                },
+                {
+                  "ParameterKey": "PostgreSQLUsername",
+                  "ParameterValue": ${POSTGRESQL_USERNAME}
+                },
+                {
+                  "ParameterKey": "PostgreSQLPassword",
+                  "ParameterValue": ${POSTGRESQL_PASSWORD}
+                },
+                {
+                  "ParameterKey": "PostgreSQLHost",
+                  "ParameterValue": ${POSTGRESQL_HOST}
+                },
+                {
+                  "ParameterKey": "PostgreSQLPort",
+                  "ParameterValue": "5432"
+                },
+                {
+                  "ParameterKey": "PostgreSQLDBName",
+                  "ParameterValue": ${POSTGRESQL_DB_NAME}
+                }
+              ]
             WAIT: 'true'
             WAIT_INTERVAL: 60
             DEBUG: 'true'
