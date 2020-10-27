@@ -194,82 +194,82 @@ Outputs:
             Ref: GetChatRoomMessages
         Export:
             Name:
-                Fn::Sub: "${AWS::StackName}:GetChatRoomMessages"
+                Fn::Sub: "${AWS::StackName}:${EnvironmentName}GetChatRoomMessages"
     CreateChatRoomMessage:
         Value:
             Ref: CreateChatRoomMessage
         Export:
             Name:
-                Fn::Sub: "${AWS::StackName}:CreateChatRoomMessage"
+                Fn::Sub: "${AWS::StackName}:${EnvironmentName}CreateChatRoomMessage"
     GetChannelsTypesAndChannels:
         Value:
             Ref: GetChannelsTypesAndChannels
         Export:
             Name:
-                Fn::Sub: "${AWS::StackName}:GetChannelsTypesAndChannels"
+                Fn::Sub: "${AWS::StackName}:${EnvironmentName}GetChannelsTypesAndChannels"
     CreateChatRoom:
         Value:
             Ref: CreateChatRoom
         Export:
             Name:
-                Fn::Sub: "${AWS::StackName}:CreateChatRoom"
+                Fn::Sub: "${AWS::StackName}:${EnvironmentName}CreateChatRoom"
     AssignChatRoomOperator:
         Value:
             Ref: AssignChatRoomOperator
         Export:
             Name:
-                Fn::Sub: "${AWS::StackName}:AssignChatRoomOperator"
+                Fn::Sub: "${AWS::StackName}:${EnvironmentName}AssignChatRoomOperator"
     CloseChatRoom:
         Value:
             Ref: CloseChatRoom
         Export:
             Name:
-                Fn::Sub: "${AWS::StackName}:CloseChatRoom"
+                Fn::Sub: "${AWS::StackName}:${EnvironmentName}CloseChatRoom"
     UpdateMessageSendingStatus:
         Value:
             Ref: UpdateMessageSendingStatus
         Export:
             Name:
-                Fn::Sub: "${AWS::StackName}:UpdateMessageSendingStatus"
+                Fn::Sub: "${AWS::StackName}:${EnvironmentName}UpdateMessageSendingStatus"
     GetNonAcceptedChatRooms:
         Value:
             Ref: GetNonAcceptedChatRooms
         Export:
             Name:
-                Fn::Sub: "${AWS::StackName}:GetNonAcceptedChatRooms"
+                Fn::Sub: "${AWS::StackName}:${EnvironmentName}GetNonAcceptedChatRooms"
     GetChatRoomInformation:
         Value:
             Ref: GetChatRoomInformation
         Export:
             Name:
-                Fn::Sub: "${AWS::StackName}:GetChatRoomInformation"
+                Fn::Sub: "${AWS::StackName}:${EnvironmentName}GetChatRoomInformation"
     GetAcceptedChatRooms:
         Value:
             Ref: GetAcceptedChatRooms
         Export:
             Name:
-                Fn::Sub: "${AWS::StackName}:GetAcceptedChatRooms"
+                Fn::Sub: "${AWS::StackName}:${EnvironmentName}GetAcceptedChatRooms"
     GetCompletedChatRooms:
         Value:
             Ref: GetCompletedChatRooms
         Export:
             Name:
-                Fn::Sub: "${AWS::StackName}:GetCompletedChatRooms"
+                Fn::Sub: "${AWS::StackName}:${EnvironmentName}GetCompletedChatRooms"
     ActivateClosedChatRoom:
         Value:
             Ref: ActivateClosedChatRoom
         Export:
             Name:
-                Fn::Sub: "${AWS::StackName}:ActivateClosedChatRoom"
+                Fn::Sub: "${AWS::StackName}:${EnvironmentName}ActivateClosedChatRoom"
     UpdateMessageStatus:
         Value:
             Ref: UpdateMessageStatus
         Export:
             Name:
-                Fn::Sub: "${AWS::StackName}:UpdateMessageStatus"
+                Fn::Sub: "${AWS::StackName}:${EnvironmentName}UpdateMessageStatus"
     GetChannelOnlineOperators:
         Value:
             Ref: GetChannelOnlineOperators
         Export:
             Name:
-                Fn::Sub: "${AWS::StackName}:GetChannelOnlineOperators"
+                Fn::Sub: "${AWS::StackName}:${EnvironmentName}GetChannelOnlineOperators"
