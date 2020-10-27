@@ -4,6 +4,30 @@ Globals:
     Function:
         MemorySize: 3008
         Timeout: 900
+        Environment:
+            Variables:
+                CASSANDRA_USERNAME:
+                    Fn::Sub: "${CassandraUsername}"
+                CASSANDRA_PASSWORD:
+                    Fn::Sub: "${CassandraPassword}"
+                CASSANDRA_HOST:
+                    Fn::Sub: "${CassandraHost}"
+                CASSANDRA_PORT:
+                    Fn::Sub: "${CassandraPort}"
+                CASSANDRA_LOCAL_DC:
+                    Fn::Sub: "${CassandraLocalDC}"
+                CASSANDRA_KEYSPACE_NAME:
+                    Fn::Sub: "${CassandraKeyspaceName}"
+                POSTGRESQL_USERNAME:
+                    Fn::Sub: "${PostgreSQLUsername}"
+                POSTGRESQL_PASSWORD:
+                    Fn::Sub: "${PostgreSQLPassword}"
+                POSTGRESQL_HOST:
+                    Fn::Sub: "${PostgreSQLHost}"
+                POSTGRESQL_PORT:
+                    Fn::Sub: "${PostgreSQLPort}"
+                POSTGRESQL_DB_NAME:
+                    Fn::Sub: "${PostgreSQLDBName}"
 Parameters:
     EnvironmentName:
         Type: String
