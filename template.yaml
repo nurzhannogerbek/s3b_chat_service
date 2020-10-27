@@ -10,7 +10,7 @@ Parameters:
         Default: Test
     BackendDependenciesStackName:
         Type: String
-        Default: BackendDependencies
+        Default: 3beepBackendDependencies
 Resources:
     GetChatRoomMessages:
         Type: AWS::Serverless::Function
