@@ -127,3 +127,4 @@ $RECYCLE.BIN/
 archives
 AmazonRootCA1.pem
 .aws-sam
+samconfig.toml
