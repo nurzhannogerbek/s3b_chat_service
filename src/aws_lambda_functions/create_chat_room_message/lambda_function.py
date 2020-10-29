@@ -80,27 +80,27 @@ def lambda_handler(event, context):
     except KeyError:
         message_content_url = None
     try:
-        quoted_message_id = event["arguments"]["input"]["quotedMessage"]["quotedMessageId"]
+        quoted_message_id = event["arguments"]["input"]["quotedMessage"]["messageId"]
     except KeyError:
         quoted_message_id = None
     try:
-        quoted_message_author_id = event["arguments"]["input"]["quotedMessageAuthorId"]
+        quoted_message_author_id = event["arguments"]["input"]["quotedMessage"]["messageAuthorId"]
     except KeyError:
         quoted_message_author_id = None
     try:
-        quoted_message_channel_id = event["arguments"]["input"]["quotedMessageChannelId"]
+        quoted_message_channel_id = event["arguments"]["input"]["quotedMessage"]["messageChannelId"]
     except KeyError:
         quoted_message_channel_id = None
     try:
-        quoted_message_type = event["arguments"]["input"]["quotedMessageType"]
+        quoted_message_type = event["arguments"]["input"]["quotedMessage"]["messageType"]
     except KeyError:
         quoted_message_type = None
     try:
-        quoted_message_text = event["arguments"]["input"]["quotedMessageText"]
+        quoted_message_text = event["arguments"]["input"]["quotedMessage"]["messageText"]
     except KeyError:
         quoted_message_text = None
     try:
-        quoted_message_content_url = event["arguments"]["input"]["quotedMessageContentUrl"]
+        quoted_message_content_url = event["arguments"]["input"]["quotedMessage"]["messageContentUrl"]
     except KeyError:
         quoted_message_content_url = None
 
