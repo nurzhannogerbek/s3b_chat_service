@@ -6,7 +6,6 @@ import os
 from psycopg2.extras import RealDictCursor
 from cassandra.query import dict_factory
 
-
 """
 Define connections to databases outside of the "lambda_handler" function.
 Connections to databases will be created the first time the function is called.
@@ -187,7 +186,7 @@ def lambda_handler(event, context):
 
             # Execute a previously prepared SQL query.
             try:
-                chat_room_message_entry = cursor.execute(cassandra_query).one()
+                chat_room_message_entry = cassandra_connection.execute(cassandra_query).one()
             except Exception as error:
                 logger.error(error)
                 sys.exit(1)
@@ -196,7 +195,7 @@ def lambda_handler(event, context):
             chat_room_last_message = dict()
             if chat_room_message_entry is not None:
                 chat_room_last_message["lastMessageContent"] = chat_room_message_entry["message_text"]
-                chat_room_last_message["lastMessageDateTime"] = chat_room_message_entry["message_created_date_time"]
+                chat_room_last_message["lastMessageDateTime"] = str(chat_room_message_entry["message_created_date_time"])
                 chat_rooms_last_messages_storage[entry["chat_room_id"]] = chat_room_last_message
 
         # Define the Determine the last operators of chat rooms.
@@ -319,7 +318,8 @@ def lambda_handler(event, context):
                     value = str(value)
                 chat_room[utils.camel_case(key)] = value
             chat_room["operator"] = operators_storage.get(entry["chat_room_id"], None)
-            chat_room = {**chat_room, **chat_rooms_last_messages_storage[entry["chat_room_id"]]}
+            if chat_rooms_last_messages_storage.__contains__(entry["chat_room_id"]):
+                chat_room = {**chat_room, **chat_rooms_last_messages_storage[entry["chat_room_id"]]}
             chat_rooms.append(chat_room)
 
     # Return the list of aggregated data as the response.
