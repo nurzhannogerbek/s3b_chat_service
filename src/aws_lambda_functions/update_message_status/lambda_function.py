@@ -13,7 +13,6 @@ Connections to databases will be created the first time the function is called.
 Any subsequent function call will use the same database connections.
 """
 cassandra_connection = None
-postgresql_connection = None
 
 # Define databases settings parameters.
 CASSANDRA_USERNAME = os.environ["CASSANDRA_USERNAME"]
@@ -22,11 +21,6 @@ CASSANDRA_HOST = os.environ["CASSANDRA_HOST"].split(',')
 CASSANDRA_PORT = int(os.environ["CASSANDRA_PORT"])
 CASSANDRA_LOCAL_DC = os.environ["CASSANDRA_LOCAL_DC"]
 CASSANDRA_KEYSPACE_NAME = os.environ["CASSANDRA_KEYSPACE_NAME"]
-POSTGRESQL_USERNAME = os.environ["POSTGRESQL_USERNAME"]
-POSTGRESQL_PASSWORD = os.environ["POSTGRESQL_PASSWORD"]
-POSTGRESQL_HOST = os.environ["POSTGRESQL_HOST"]
-POSTGRESQL_PORT = int(os.environ["POSTGRESQL_PORT"])
-POSTGRESQL_DB_NAME = os.environ["POSTGRESQL_DB_NAME"]
 
 logger = logging.getLogger(__name__)  # Create the logger with the specified name.
 logger.setLevel(logging.WARNING)  # Set the logging level of the logger.
@@ -47,19 +41,6 @@ def lambda_handler(event, context):
                 CASSANDRA_HOST,
                 CASSANDRA_PORT,
                 CASSANDRA_LOCAL_DC
-            )
-        except Exception as error:
-            logger.error(error)
-            sys.exit(1)
-    global postgresql_connection
-    if not postgresql_connection:
-        try:
-            postgresql_connection = databases.create_postgresql_connection(
-                POSTGRESQL_USERNAME,
-                POSTGRESQL_PASSWORD,
-                POSTGRESQL_HOST,
-                POSTGRESQL_PORT,
-                POSTGRESQL_DB_NAME
             )
         except Exception as error:
             logger.error(error)

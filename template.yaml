@@ -235,6 +235,19 @@ Resources:
                     Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Databases"
                 - Fn::ImportValue:
                     Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Utils"
+    GetClientChatRooms:
+        Type: AWS::Serverless::Function
+        Properties:
+            FunctionName:
+                Fn::Sub: "${EnvironmentName}GetClientChatRooms"
+            CodeUri: src/aws_lambda_functions/get_client_chat_rooms
+            Handler: lambda_function.lambda_handler
+            Runtime: python3.8
+            Layers:
+                - Fn::ImportValue:
+                      Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Databases"
+                - Fn::ImportValue:
+                      Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Utils"
 Outputs:
     GetChatRoomMessages:
         Value:
@@ -320,3 +333,9 @@ Outputs:
         Export:
             Name:
                 Fn::Sub: "${AWS::StackName}:${EnvironmentName}GetChannelOnlineOperators"
+    GetClientChatRooms:
+        Value:
+            Ref: GetClientChatRooms
+        Export:
+            Name:
+                Fn::Sub: "${AWS::StackName}:${EnvironmentName}GetClientChatRooms"
