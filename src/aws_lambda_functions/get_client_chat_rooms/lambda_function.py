@@ -66,9 +66,9 @@ def lambda_handler(event, context):
             sys.exit(1)
 
     # Define the values of the data passed to the function.
-    channel_technical_id = event["arguments"]["input"]["channelTechnicalId"]
-    channel_type_name = event["arguments"]["input"]["channelTypeName"]
-    client_id = event["arguments"]["input"]["clientId"]
+    channel_technical_id = event["arguments"]["channelTechnicalId"]
+    channel_type_name = event["arguments"]["channelTypeName"]
+    client_id = event["arguments"]["clientId"]
     offset = event["arguments"]["currentPageNumber"]
     limit = event["arguments"]["recordsNumber"]
     offset = (offset - 1) * limit
