@@ -249,93 +249,93 @@ Resources:
                 - Fn::ImportValue:
                       Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Utils"
 Outputs:
-    GetChatRoomMessages:
+    GetChatRoomMessagesARN:
         Value:
-            Ref: GetChatRoomMessages
+            Fn::GetAtt: GetChatRoomMessages.Arn
         Export:
             Name:
-                Fn::Sub: "${AWS::StackName}:${EnvironmentName}GetChatRoomMessages"
-    CreateChatRoomMessage:
+                Fn::Sub: "${AWS::StackName}:${EnvironmentName}GetChatRoomMessagesARN"
+    CreateChatRoomMessageARN:
         Value:
-            Ref: CreateChatRoomMessage
+            Fn::GetAtt: CreateChatRoomMessage.Arn
         Export:
             Name:
-                Fn::Sub: "${AWS::StackName}:${EnvironmentName}CreateChatRoomMessage"
-    GetChannelsTypesAndChannels:
+                Fn::Sub: "${AWS::StackName}:${EnvironmentName}CreateChatRoomMessageARN"
+    GetChannelsTypesAndChannelsARN:
         Value:
-            Ref: GetChannelsTypesAndChannels
+            Fn::GetAtt: GetChannelsTypesAndChannels.Arn
         Export:
             Name:
-                Fn::Sub: "${AWS::StackName}:${EnvironmentName}GetChannelsTypesAndChannels"
-    CreateChatRoom:
+                Fn::Sub: "${AWS::StackName}:${EnvironmentName}GetChannelsTypesAndChannelsARN"
+    CreateChatRoomARN:
         Value:
-            Ref: CreateChatRoom
+            Fn::GetAtt: CreateChatRoom.Arn
         Export:
             Name:
-                Fn::Sub: "${AWS::StackName}:${EnvironmentName}CreateChatRoom"
-    AssignChatRoomOperator:
+                Fn::Sub: "${AWS::StackName}:${EnvironmentName}CreateChatRoomARN"
+    AssignChatRoomOperatorARN:
         Value:
-            Ref: AssignChatRoomOperator
+            Fn::GetAtt: AssignChatRoomOperator.Arn
         Export:
             Name:
-                Fn::Sub: "${AWS::StackName}:${EnvironmentName}AssignChatRoomOperator"
-    CloseChatRoom:
+                Fn::Sub: "${AWS::StackName}:${EnvironmentName}AssignChatRoomOperatorARN"
+    CloseChatRoomARN:
         Value:
-            Ref: CloseChatRoom
+            Fn::GetAtt: CloseChatRoom.Arn
         Export:
             Name:
-                Fn::Sub: "${AWS::StackName}:${EnvironmentName}CloseChatRoom"
-    UpdateMessageSendingStatus:
+                Fn::Sub: "${AWS::StackName}:${EnvironmentName}CloseChatRoomARN"
+    UpdateMessageSendingStatusARN:
         Value:
-            Ref: UpdateMessageSendingStatus
+            Fn::GetAtt: UpdateMessageSendingStatus.Arn
         Export:
             Name:
-                Fn::Sub: "${AWS::StackName}:${EnvironmentName}UpdateMessageSendingStatus"
-    GetNonAcceptedChatRooms:
+                Fn::Sub: "${AWS::StackName}:${EnvironmentName}UpdateMessageSendingStatusARN"
+    GetNonAcceptedChatRoomsARN:
         Value:
-            Ref: GetNonAcceptedChatRooms
+            Fn::GetAtt: GetNonAcceptedChatRooms.Arn
         Export:
             Name:
-                Fn::Sub: "${AWS::StackName}:${EnvironmentName}GetNonAcceptedChatRooms"
-    GetChatRoomInformation:
+                Fn::Sub: "${AWS::StackName}:${EnvironmentName}GetNonAcceptedChatRoomsARN"
+    GetChatRoomInformationARN:
         Value:
-            Ref: GetChatRoomInformation
+            Fn::GetAtt: GetChatRoomInformation.Arn
         Export:
             Name:
-                Fn::Sub: "${AWS::StackName}:${EnvironmentName}GetChatRoomInformation"
-    GetAcceptedChatRooms:
+                Fn::Sub: "${AWS::StackName}:${EnvironmentName}GetChatRoomInformationARN"
+    GetAcceptedChatRoomsARN:
         Value:
-            Ref: GetAcceptedChatRooms
+            Fn::GetAtt: GetAcceptedChatRooms.Arn
         Export:
             Name:
-                Fn::Sub: "${AWS::StackName}:${EnvironmentName}GetAcceptedChatRooms"
-    GetCompletedChatRooms:
+                Fn::Sub: "${AWS::StackName}:${EnvironmentName}GetAcceptedChatRoomsARN"
+    GetCompletedChatRoomsARN:
         Value:
-            Ref: GetCompletedChatRooms
+            Fn::GetAtt: GetCompletedChatRooms.Arn
         Export:
             Name:
-                Fn::Sub: "${AWS::StackName}:${EnvironmentName}GetCompletedChatRooms"
-    ActivateClosedChatRoom:
+                Fn::Sub: "${AWS::StackName}:${EnvironmentName}GetCompletedChatRoomsARN"
+    ActivateClosedChatRoomARN:
         Value:
-            Ref: ActivateClosedChatRoom
+            Fn::GetAtt: ActivateClosedChatRoom.Arn
         Export:
             Name:
-                Fn::Sub: "${AWS::StackName}:${EnvironmentName}ActivateClosedChatRoom"
-    UpdateMessageStatus:
+                Fn::Sub: "${AWS::StackName}:${EnvironmentName}ActivateClosedChatRoomARN"
+    UpdateMessageStatusARN:
         Value:
-            Ref: UpdateMessageStatus
+            Fn::GetAtt: UpdateMessageStatus.Arn
         Export:
             Name:
-                Fn::Sub: "${AWS::StackName}:${EnvironmentName}UpdateMessageStatus"
-    GetChannelOnlineOperators:
+                Fn::Sub: "${AWS::StackName}:${EnvironmentName}UpdateMessageStatusARN"
+    GetChannelOnlineOperatorsARN:
         Value:
-            Ref: GetChannelOnlineOperators
+            Fn::GetAtt: GetChannelOnlineOperators.Arn
         Export:
             Name:
-                Fn::Sub: "${AWS::StackName}:${EnvironmentName}GetChannelOnlineOperators"
-    GetClientChatRooms:
+                Fn::Sub: "${AWS::StackName}:${EnvironmentName}GetChannelOnlineOperatorsARN"
+    GetClientChatRoomsARN:
         Value:
-            Ref: GetClientChatRooms
+            Fn::GetAtt: GetClientChatRooms.Arn
         Export:
             Name:
-                Fn::Sub: "${AWS::StackName}:${EnvironmentName}GetClientChatRooms"
+                Fn::Sub: "${AWS::StackName}:${EnvironmentName}GetClientChatRoomsARN"
