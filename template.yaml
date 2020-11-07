@@ -1,12 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Parameters:
-    EnvironmentName:
-        Type: String
-        Default: Test
-    BackendDependenciesStackName:
-        Type: String
-        Default: 3beepBackendDependencies
     CassandraUsername:
         Type: String
     CassandraPassword:
@@ -29,8 +23,15 @@ Parameters:
         Type: String
     PostgreSQLDBName:
         Type: String
+    EnvironmentName:
+        Type: String
+    DatabasesLayerARN:
+        Type: String
+    UtilsLayerARN:
+        Type: String
 Globals:
     Function:
+        Runtime: python3.8
         MemorySize: 3008
         Timeout: 900
         Environment:
@@ -65,12 +66,9 @@ Resources:
                 Fn::Sub: "${EnvironmentName}GetChatRoomMessages"
             CodeUri: src/aws_lambda_functions/get_chat_room_messages
             Handler: lambda_function.lambda_handler
-            Runtime: python3.8
             Layers:
-                - Fn::ImportValue:
-                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Databases"
-                - Fn::ImportValue:
-                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Utils"
+                - Fn::Sub: "${DatabasesLayerARN}"
+                - Fn::Sub: "${UtilsLayerARN}"
     CreateChatRoomMessage:
         Type: AWS::Serverless::Function
         Properties:
@@ -78,12 +76,9 @@ Resources:
                 Fn::Sub: "${EnvironmentName}CreateChatRoomMessage"
             CodeUri: src/aws_lambda_functions/create_chat_room_message
             Handler: lambda_function.lambda_handler
-            Runtime: python3.8
             Layers:
-                - Fn::ImportValue:
-                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Databases"
-                - Fn::ImportValue:
-                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Utils"
+                - Fn::Sub: "${DatabasesLayerARN}"
+                - Fn::Sub: "${UtilsLayerARN}"
     GetChannelsTypesAndChannels:
         Type: AWS::Serverless::Function
         Properties:
@@ -91,12 +86,9 @@ Resources:
                 Fn::Sub: "${EnvironmentName}GetChannelsTypesAndChannels"
             CodeUri: src/aws_lambda_functions/get_channels_types_and_channels
             Handler: lambda_function.lambda_handler
-            Runtime: python3.8
             Layers:
-                - Fn::ImportValue:
-                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Databases"
-                - Fn::ImportValue:
-                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Utils"
+                - Fn::Sub: "${DatabasesLayerARN}"
+                - Fn::Sub: "${UtilsLayerARN}"
     CreateChatRoom:
         Type: AWS::Serverless::Function
         Properties:
@@ -104,12 +96,9 @@ Resources:
                 Fn::Sub: "${EnvironmentName}CreateChatRoom"
             CodeUri: src/aws_lambda_functions/create_chat_room
             Handler: lambda_function.lambda_handler
-            Runtime: python3.8
             Layers:
-                - Fn::ImportValue:
-                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Databases"
-                - Fn::ImportValue:
-                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Utils"
+                - Fn::Sub: "${DatabasesLayerARN}"
+                - Fn::Sub: "${UtilsLayerARN}"
     AssignChatRoomOperator:
         Type: AWS::Serverless::Function
         Properties:
@@ -117,12 +106,9 @@ Resources:
                 Fn::Sub: "${EnvironmentName}AssignChatRoomOperator"
             CodeUri: src/aws_lambda_functions/assign_chat_room_operator
             Handler: lambda_function.lambda_handler
-            Runtime: python3.8
             Layers:
-                - Fn::ImportValue:
-                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Databases"
-                - Fn::ImportValue:
-                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Utils"
+                - Fn::Sub: "${DatabasesLayerARN}"
+                - Fn::Sub: "${UtilsLayerARN}"
     CloseChatRoom:
         Type: AWS::Serverless::Function
         Properties:
@@ -130,12 +116,9 @@ Resources:
                 Fn::Sub: "${EnvironmentName}CloseChatRoom"
             CodeUri: src/aws_lambda_functions/close_chat_room
             Handler: lambda_function.lambda_handler
-            Runtime: python3.8
             Layers:
-                - Fn::ImportValue:
-                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Databases"
-                - Fn::ImportValue:
-                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Utils"
+                - Fn::Sub: "${DatabasesLayerARN}"
+                - Fn::Sub: "${UtilsLayerARN}"
     UpdateMessageSendingStatus:
         Type: AWS::Serverless::Function
         Properties:
@@ -143,7 +126,6 @@ Resources:
                 Fn::Sub: "${EnvironmentName}UpdateMessageSendingStatus"
             CodeUri: src/aws_lambda_functions/update_message_sending_status
             Handler: lambda_function.lambda_handler
-            Runtime: python3.8
     GetNonAcceptedChatRooms:
         Type: AWS::Serverless::Function
         Properties:
@@ -151,12 +133,9 @@ Resources:
                 Fn::Sub: "${EnvironmentName}GetNonAcceptedChatRooms"
             CodeUri: src/aws_lambda_functions/get_non_accepted_chat_rooms
             Handler: lambda_function.lambda_handler
-            Runtime: python3.8
             Layers:
-                - Fn::ImportValue:
-                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Databases"
-                - Fn::ImportValue:
-                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Utils"
+                - Fn::Sub: "${DatabasesLayerARN}"
+                - Fn::Sub: "${UtilsLayerARN}"
     GetChatRoomInformation:
         Type: AWS::Serverless::Function
         Properties:
@@ -164,12 +143,9 @@ Resources:
                 Fn::Sub: "${EnvironmentName}GetChatRoomInformation"
             CodeUri: src/aws_lambda_functions/get_chat_room_information
             Handler: lambda_function.lambda_handler
-            Runtime: python3.8
             Layers:
-                - Fn::ImportValue:
-                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Databases"
-                - Fn::ImportValue:
-                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Utils"
+                - Fn::Sub: "${DatabasesLayerARN}"
+                - Fn::Sub: "${UtilsLayerARN}"
     GetAcceptedChatRooms:
         Type: AWS::Serverless::Function
         Properties:
@@ -177,12 +153,9 @@ Resources:
                 Fn::Sub: "${EnvironmentName}GetAcceptedChatRooms"
             CodeUri: src/aws_lambda_functions/get_accepted_chat_rooms
             Handler: lambda_function.lambda_handler
-            Runtime: python3.8
             Layers:
-                - Fn::ImportValue:
-                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Databases"
-                - Fn::ImportValue:
-                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Utils"
+                - Fn::Sub: "${DatabasesLayerARN}"
+                - Fn::Sub: "${UtilsLayerARN}"
     GetCompletedChatRooms:
         Type: AWS::Serverless::Function
         Properties:
@@ -190,12 +163,9 @@ Resources:
                 Fn::Sub: "${EnvironmentName}GetCompletedChatRooms"
             CodeUri: src/aws_lambda_functions/get_completed_chat_rooms
             Handler: lambda_function.lambda_handler
-            Runtime: python3.8
             Layers:
-                - Fn::ImportValue:
-                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Databases"
-                - Fn::ImportValue:
-                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Utils"
+                - Fn::Sub: "${DatabasesLayerARN}"
+                - Fn::Sub: "${UtilsLayerARN}"
     ActivateClosedChatRoom:
         Type: AWS::Serverless::Function
         Properties:
@@ -203,12 +173,9 @@ Resources:
                 Fn::Sub: "${EnvironmentName}ActivateClosedChatRoom"
             CodeUri: src/aws_lambda_functions/activate_closed_chat_room
             Handler: lambda_function.lambda_handler
-            Runtime: python3.8
             Layers:
-                - Fn::ImportValue:
-                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Databases"
-                - Fn::ImportValue:
-                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Utils"
+                - Fn::Sub: "${DatabasesLayerARN}"
+                - Fn::Sub: "${UtilsLayerARN}"
     UpdateMessageStatus:
         Type: AWS::Serverless::Function
         Properties:
@@ -216,12 +183,9 @@ Resources:
                 Fn::Sub: "${EnvironmentName}UpdateMessageStatus"
             CodeUri: src/aws_lambda_functions/update_message_status
             Handler: lambda_function.lambda_handler
-            Runtime: python3.8
             Layers:
-                - Fn::ImportValue:
-                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Databases"
-                - Fn::ImportValue:
-                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Utils"
+                - Fn::Sub: "${DatabasesLayerARN}"
+                - Fn::Sub: "${UtilsLayerARN}"
     GetChannelOnlineOperators:
         Type: AWS::Serverless::Function
         Properties:
@@ -229,12 +193,9 @@ Resources:
                 Fn::Sub: "${EnvironmentName}GetChannelOnlineOperators"
             CodeUri: src/aws_lambda_functions/get_channel_online_operators
             Handler: lambda_function.lambda_handler
-            Runtime: python3.8
             Layers:
-                - Fn::ImportValue:
-                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Databases"
-                - Fn::ImportValue:
-                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Utils"
+                - Fn::Sub: "${DatabasesLayerARN}"
+                - Fn::Sub: "${UtilsLayerARN}"
     GetClientChatRooms:
         Type: AWS::Serverless::Function
         Properties:
@@ -242,12 +203,9 @@ Resources:
                 Fn::Sub: "${EnvironmentName}GetClientChatRooms"
             CodeUri: src/aws_lambda_functions/get_client_chat_rooms
             Handler: lambda_function.lambda_handler
-            Runtime: python3.8
             Layers:
-                - Fn::ImportValue:
-                      Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Databases"
-                - Fn::ImportValue:
-                      Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Utils"
+                - Fn::Sub: "${DatabasesLayerARN}"
+                - Fn::Sub: "${UtilsLayerARN}"
 Outputs:
     GetChatRoomMessagesARN:
         Value:
