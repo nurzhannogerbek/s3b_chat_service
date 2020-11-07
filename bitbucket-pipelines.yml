@@ -44,6 +44,8 @@ deploy: &deploy
             export DATABASES_LAYER_NAME="ProdDatabases"
             export UTILS_LAYER_NAME="ProdUtils"
           fi
+        - apt-get update && apt-get install -y python3-pip
+        - pip3 install -U awscli
         - aws configure set default.region $AWS_DEFAULT_REGION
         - aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
         - aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
