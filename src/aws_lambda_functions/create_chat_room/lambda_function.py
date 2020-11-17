@@ -71,6 +71,10 @@ def lambda_handler(event, context):
     channel_technical_id = event["arguments"]["input"]["channelTechnicalId"]
     channel_type_name = event["arguments"]["input"]["channelTypeName"]
     client_id = event["arguments"]["input"]["clientId"]
+    try:
+        telegram_chat_id = event["arguments"]["input"]['telegramChatId']
+    except KeyError:
+        telegram_chat_id = None
 
     # With a dictionary cursor, the data is sent in a form of Python dictionaries.
     cursor = postgresql_connection.cursor(cursor_factory=RealDictCursor)
@@ -117,7 +121,13 @@ def lambda_handler(event, context):
 
     # Fetch the next row of a query result set.
     aggregated_entry = cursor.fetchone()
-    if aggregated_entry is None:
+
+    # Define several necessary variables that can be used in the future.
+    try:
+        organizations_ids = aggregated_entry["organizations_ids"]
+        channel_id = aggregated_entry["channel_id"]
+    except Exception as error:
+        logger.error(error)
         sys.exit(1)
 
     # Check the data about channels types and channels received from the database.
@@ -244,62 +254,6 @@ def lambda_handler(event, context):
     # Generate a unique ID for a new non accepted chat room.
     chat_room_id = str(uuid.uuid1())
 
-    # Set the name of the keyspace you will be working with.
-    # This statement must fix ERROR NoHostAvailable: ('Unable to complete the operation against any hosts').
-    success = False
-    while not success:
-        try:
-            cassandra_connection.set_keyspace(CASSANDRA_KEYSPACE_NAME)
-            success = True
-        except Exception as error:
-            try:
-                cassandra_connection = databases.create_cassandra_connection(
-                    CASSANDRA_USERNAME,
-                    CASSANDRA_PASSWORD,
-                    CASSANDRA_HOST,
-                    CASSANDRA_PORT,
-                    CASSANDRA_LOCAL_DC
-                )
-            except Exception as error:
-                logger.error(error)
-                sys.exit(1)
-
-    # Define the list of departments that can serve the specific channel.
-    organizations_ids = aggregated_entry["organizations_ids"]
-
-    # Prepare the CQL query statement that creates a new non accepted chat room in the Cassandra database.
-    if len(organizations_ids) != 0:
-        for organization_id in organizations_ids:
-            cassandra_query = """
-            insert into non_accepted_chat_rooms (
-                organization_id,
-                channel_id,
-                chat_room_id,
-                client_id
-            ) values (
-                {0},
-                {1},
-                {2},
-                {3}
-            );
-            """.format(
-                organization_id,
-                aggregated_entry["channel_id"],
-                chat_room_id,
-                client_id
-            )
-            statement = SimpleStatement(
-                cassandra_query,
-                consistency_level=ConsistencyLevel.LOCAL_QUORUM
-            )
-
-            # Execute a previously prepared CQL query.
-            try:
-                cassandra_connection.execute(statement)
-            except Exception as error:
-                logger.error(error)
-                sys.exit(1)
-
     # Prepare the SQL query statement that creates new non accepted chat room.
     statement = """
     insert into chat_rooms (
@@ -315,7 +269,7 @@ def lambda_handler(event, context):
         chat_room_status;
     """.format(
         chat_room_id,
-        aggregated_entry["channel_id"]
+        channel_id
     )
 
     # Execute a previously prepared SQL query.
@@ -329,7 +283,36 @@ def lambda_handler(event, context):
     postgresql_connection.commit()
 
     # Fetch the next row of a query result set.
-    chat_room_status = cursor.fetchone()["chat_room_status"]
+    try:
+        chat_room_status = cursor.fetchone()["chat_room_status"]
+    except KeyError:
+        chat_room_status = None
+
+    # Check which messenger or social network the chat room is being created for.
+    if channel_type_name.lower() == "telegram" and telegram_chat_id is not None:
+        # Link a previously created chat room with a technical ID from telegram.
+        statement = """
+            insert into telegram_chat_rooms (
+                chat_room_id,
+                telegram_chat_id
+            ) values (
+                '{0}',
+                '{1}'
+            );
+            """.format(
+            chat_room_id,
+            telegram_chat_id
+        )
+
+        # Execute a previously prepared SQL query.
+        try:
+            cursor.execute(statement)
+        except Exception as error:
+            logger.error(error)
+            sys.exit(1)
+
+        # After the successful execution of the query commit your changes to the database.
+        postgresql_connection.commit()
 
     # Prepare the SQL query statement that add client as a member of the specific chat room.
     statement = """
@@ -357,6 +340,59 @@ def lambda_handler(event, context):
 
     # The cursor will be unusable from this point forward.
     cursor.close()
+
+    # Prepare the CQL query statement that creates a new non accepted chat room in the Cassandra database.
+    if len(organizations_ids) != 0:
+        # Set the name of the keyspace you will be working with.
+        # This statement must fix ERROR NoHostAvailable: ('Unable to complete the operation against any hosts').
+        success = False
+        while not success:
+            try:
+                cassandra_connection.set_keyspace(CASSANDRA_KEYSPACE_NAME)
+                success = True
+            except Exception as error:
+                try:
+                    cassandra_connection = databases.create_cassandra_connection(
+                        CASSANDRA_USERNAME,
+                        CASSANDRA_PASSWORD,
+                        CASSANDRA_HOST,
+                        CASSANDRA_PORT,
+                        CASSANDRA_LOCAL_DC
+                    )
+                except Exception as error:
+                    logger.error(error)
+                    sys.exit(1)
+
+        for organization_id in organizations_ids:
+            cassandra_query = """
+            insert into non_accepted_chat_rooms (
+                organization_id,
+                channel_id,
+                chat_room_id,
+                client_id
+            ) values (
+                {0},
+                {1},
+                {2},
+                {3}
+            );
+            """.format(
+                organization_id,
+                channel_id,
+                chat_room_id,
+                client_id
+            )
+            statement = SimpleStatement(
+                cassandra_query,
+                consistency_level=ConsistencyLevel.LOCAL_QUORUM
+            )
+
+            # Execute a previously prepared CQL query.
+            try:
+                cassandra_connection.execute(statement)
+            except Exception as error:
+                logger.error(error)
+                sys.exit(1)
 
     # Return the new non accepted chat room information as the response.
     response = {
