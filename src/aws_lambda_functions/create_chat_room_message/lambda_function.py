@@ -371,17 +371,16 @@ def lambda_handler(event, context):
 
     # Analyze the data about chat room message received from the database.
     chat_room_message = dict()
-    if chat_room_message_entry is not None:
-        quoted_message = dict()
-        for key, value in chat_room_message_entry.items():
-            if ("_id" in key or "_date_time" in key) and value is not None:
-                value = str(value)
-            if "quoted_" in key:
-                quoted_message[utils.camel_case(key.replace("quoted_", ""))] = value
-            else:
-                chat_room_message[utils.camel_case(key)] = value
-        chat_room_message["quotedMessage"] = quoted_message
-        chat_room_message["channelId"] = channel_id
+    quoted_message = dict()
+    for key, value in chat_room_message_entry.items():
+        if ("_id" in key or "_date_time" in key) and value is not None:
+            value = str(value)
+        if "quoted_" in key:
+            quoted_message[utils.camel_case(key.replace("quoted_", ""))] = value
+        else:
+            chat_room_message[utils.camel_case(key)] = value
+    chat_room_message["quotedMessage"] = quoted_message
+    chat_room_message["channelId"] = channel_id
 
     # Return the object with information about created chat room message.
     return chat_room_message
