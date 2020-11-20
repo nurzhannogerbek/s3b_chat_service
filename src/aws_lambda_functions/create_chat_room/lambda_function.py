@@ -75,6 +75,10 @@ def lambda_handler(event, context):
         telegram_chat_id = event["arguments"]["input"]['telegramChatId']
     except KeyError:
         telegram_chat_id = None
+    try:
+        whatsapp_chat_id = event["arguments"]["input"]['whatsappChatId']
+    except KeyError:
+        whatsapp_chat_id = None
 
     # With a dictionary cursor, the data is sent in a form of Python dictionaries.
     cursor = postgresql_connection.cursor(cursor_factory=RealDictCursor)
@@ -302,6 +306,30 @@ def lambda_handler(event, context):
             """.format(
             chat_room_id,
             telegram_chat_id
+        )
+
+        # Execute a previously prepared SQL query.
+        try:
+            cursor.execute(statement)
+        except Exception as error:
+            logger.error(error)
+            sys.exit(1)
+
+        # After the successful execution of the query commit your changes to the database.
+        postgresql_connection.commit()
+    elif channel_type_name.lower() == "whatsapp" and whatsapp_chat_id is not None:
+        # Link a previously created chat room with a technical ID from whatsapp.
+        statement = """
+            insert into whatsapp_chat_rooms (
+                chat_room_id,
+                whatsapp_chat_id
+            ) values (
+                '{0}',
+                '{1}'
+            );
+            """.format(
+            chat_room_id,
+            whatsapp_chat_id
         )
 
         # Execute a previously prepared SQL query.
