@@ -3,8 +3,7 @@ import utils
 import logging
 import sys
 import os
-from cassandra.query import dict_factory
-from cassandra.query import SimpleStatement
+from cassandra.query import SimpleStatement, dict_factory
 from cassandra import ConsistencyLevel
 from psycopg2.extras import RealDictCursor
 
@@ -98,9 +97,6 @@ def lambda_handler(event, context):
     # Fetch the next row of a query result set.
     channel_id = cursor.fetchone()["channel_id"]
 
-    # Return each row as a dictionary after querying the Cassandra database.
-    cassandra_connection.row_factory = dict_factory
-
     # Set the name of the keyspace you will be working with.
     # This statement must fix ERROR NoHostAvailable: ('Unable to complete the operation against any hosts').
     success = False
@@ -120,6 +116,9 @@ def lambda_handler(event, context):
             except Exception as error:
                 logger.error(error)
                 sys.exit(1)
+
+    # Return each row as a dictionary after querying the Cassandra database.
+    cassandra_connection.row_factory = dict_factory
 
     # Prepare the CQL query statement that returns the information of the accepted chat room.
     cassandra_query = '''

@@ -108,9 +108,6 @@ def lambda_handler(event, context):
     # Define the list of departments that can serve the specific channel.
     organizations_ids = aggregated_entry["organizations_ids"]
 
-    # Return each row as a dictionary after querying the Cassandra database.
-    cassandra_connection.row_factory = dict_factory
-
     # Set the name of the keyspace you will be working with.
     # This statement must fix ERROR NoHostAvailable: ('Unable to complete the operation against any hosts').
     success = False
@@ -130,6 +127,9 @@ def lambda_handler(event, context):
             except Exception as error:
                 logger.error(error)
                 sys.exit(1)
+
+    # Return each row as a dictionary after querying the Cassandra database.
+    cassandra_connection.row_factory = dict_factory
 
     # Prepare the CQL request that moves the chat room to the accepted status in the Cassandra database.
     cassandra_query = """
