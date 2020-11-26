@@ -3,7 +3,6 @@ import utils
 import logging
 import sys
 import os
-from cassandra.query import dict_factory
 from psycopg2.extras import RealDictCursor
 
 """
@@ -95,9 +94,6 @@ def lambda_handler(event, context):
             except Exception as error:
                 logger.error(error)
                 sys.exit(1)
-
-    # Return each row as a dictionary after querying the Cassandra database.
-    cassandra_connection.row_factory = dict_factory
 
     # Initialize an empty list where information about the chat rooms that are accepted for work will be stored.
     accepted_chat_rooms_entries = list()

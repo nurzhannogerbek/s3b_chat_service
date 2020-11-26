@@ -3,8 +3,6 @@ import utils
 import logging
 import sys
 import os
-from cassandra.query import SimpleStatement, dict_factory
-from cassandra import ConsistencyLevel
 from psycopg2.extras import RealDictCursor
 
 
@@ -117,9 +115,6 @@ def lambda_handler(event, context):
                 logger.error(error)
                 sys.exit(1)
 
-    # Return each row as a dictionary after querying the Cassandra database.
-    cassandra_connection.row_factory = dict_factory
-
     # Prepare the CQL query statement that returns the information of the accepted chat room.
     cassandra_query = '''
     select
@@ -187,14 +182,10 @@ def lambda_handler(event, context):
         'null' if accepted_chat_room_entry["unread_messages_number"] is None
         else "{0}".format(accepted_chat_room_entry["unread_messages_number"])
     )
-    statement = SimpleStatement(
-        cassandra_query,
-        consistency_level=ConsistencyLevel.LOCAL_QUORUM
-    )
 
     # Execute a previously prepared CQL query.
     try:
-        cassandra_connection.execute(statement)
+        cassandra_connection.execute(cassandra_query)
     except Exception as error:
         logger.error(error)
         sys.exit(1)
@@ -214,14 +205,10 @@ def lambda_handler(event, context):
         channel_id,
         chat_room_id
     )
-    statement = SimpleStatement(
-        cassandra_query,
-        consistency_level=ConsistencyLevel.LOCAL_QUORUM
-    )
 
     # Execute a previously prepared CQL query.
     try:
-        cassandra_connection.execute(statement)
+        cassandra_connection.execute(cassandra_query)
     except Exception as error:
         logger.error(error)
         sys.exit(1)

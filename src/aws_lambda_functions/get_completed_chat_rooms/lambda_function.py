@@ -4,8 +4,9 @@ import logging
 import sys
 import os
 import binascii
-from cassandra.query import SimpleStatement, dict_factory
+from cassandra.query import SimpleStatement
 from psycopg2.extras import RealDictCursor
+
 
 """
 Define connections to databases outside of the "lambda_handler" function.
@@ -101,9 +102,6 @@ def lambda_handler(event, context):
             except Exception as error:
                 logger.error(error)
                 sys.exit(1)
-
-    # Return each row as a dictionary after querying the Cassandra database.
-    cassandra_connection.row_factory = dict_factory
 
     # Initialize an empty list where information about completed chat rooms will be stored.
     completed_chat_rooms_entries = list()

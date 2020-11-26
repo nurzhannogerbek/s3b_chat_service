@@ -4,7 +4,8 @@ import logging
 import sys
 import os
 import binascii
-from cassandra.query import SimpleStatement, dict_factory
+from cassandra.query import SimpleStatement
+
 
 """
 Define the connection to the database outside of the "lambda_handler" function.
@@ -72,9 +73,6 @@ def lambda_handler(event, context):
             except Exception as error:
                 logger.error(error)
                 sys.exit(1)
-
-    # Return each row as a dictionary after querying the Cassandra database.
-    cassandra_connection.row_factory = dict_factory
 
     # Prepare the CQL query statement that returns a certain number of recent messages from a particular chat room.
     cassandra_query = '''

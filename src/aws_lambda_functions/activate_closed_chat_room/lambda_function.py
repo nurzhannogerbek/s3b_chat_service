@@ -3,8 +3,6 @@ import utils
 import logging
 import sys
 import os
-from cassandra.query import SimpleStatement
-from cassandra import ConsistencyLevel
 from psycopg2.extras import RealDictCursor
 
 
@@ -318,14 +316,10 @@ def lambda_handler(event, context):
             chat_room_id,
             client_id
         )
-        statement = SimpleStatement(
-            cassandra_query,
-            consistency_level=ConsistencyLevel.LOCAL_QUORUM
-        )
 
         # Execute a previously prepared CQL query.
         try:
-            cassandra_connection.execute(statement)
+            cassandra_connection.execute(cassandra_query)
         except Exception as error:
             logger.error(error)
             sys.exit(1)
@@ -345,14 +339,10 @@ def lambda_handler(event, context):
         channel_id,
         chat_room_id
     )
-    statement = SimpleStatement(
-        cassandra_query,
-        consistency_level=ConsistencyLevel.LOCAL_QUORUM
-    )
 
     # Execute a previously prepared CQL query.
     try:
-        cassandra_connection.execute(statement)
+        cassandra_connection.execute(cassandra_query)
     except Exception as error:
         logger.error(error)
         sys.exit(1)

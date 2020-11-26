@@ -4,7 +4,7 @@ import logging
 import sys
 import os
 from psycopg2.extras import RealDictCursor
-from cassandra.query import dict_factory
+
 
 """
 Define connections to databases outside of the "lambda_handler" function.
@@ -144,9 +144,6 @@ def lambda_handler(event, context):
                     logger.error(error)
                     sys.exit(1)
 
-        # Return each row as a dictionary after querying the Cassandra database.
-        cassandra_connection.row_factory = dict_factory
-
         # Define several variables.
         chat_rooms_ids = list()
         chat_rooms_last_messages_storage = dict()
@@ -201,56 +198,56 @@ def lambda_handler(event, context):
         # Define the Determine the last operators of chat rooms.
         statement = """
         select
-	        distinct on (chat_rooms_users_relationship.chat_room_id) chat_room_id,
-	        internal_users.auth0_user_id,
-	        internal_users.auth0_metadata::text,
-	        users.user_id,
-	        internal_users.internal_user_first_name as user_first_name,
-	        internal_users.internal_user_last_name as user_last_name,
-	        internal_users.internal_user_middle_name as user_middle_name,
-	        internal_users.internal_user_primary_email as user_primary_email,
-	        internal_users.internal_user_secondary_email as user_secondary_email,
-	        internal_users.internal_user_primary_phone_number as user_primary_phone_number,
-	        internal_users.internal_user_secondary_phone_number as user_secondary_phone_number,
-	        internal_users.internal_user_profile_photo_url as user_profile_photo_url,
-	        internal_users.internal_user_position_name as user_position_name,
-	        genders.gender_id,
-	        genders.gender_technical_name,
-	        genders.gender_public_name,
-	        countries.country_id,
-	        countries.country_short_name,
-	        countries.country_official_name,
-	        countries.country_alpha_2_code,
-	        countries.country_alpha_3_code,
-	        countries.country_numeric_code,
-	        countries.country_code_top_level_domain,
-	        roles.role_id,
-	        roles.role_technical_name,
-	        roles.role_public_name,
-	        roles.role_description,
-	        organizations.organization_id,
-	        organizations.organization_name,
-	        organizations.organization_description,
-	        organizations.parent_organization_id,
-	        organizations.parent_organization_name,
-	        organizations.parent_organization_description,
-	        organizations.root_organization_id,
-	        organizations.root_organization_name,
-	        organizations.root_organization_description
+            distinct on (chat_rooms_users_relationship.chat_room_id) chat_room_id,
+            internal_users.auth0_user_id,
+            internal_users.auth0_metadata::text,
+            users.user_id,
+            internal_users.internal_user_first_name as user_first_name,
+            internal_users.internal_user_last_name as user_last_name,
+            internal_users.internal_user_middle_name as user_middle_name,
+            internal_users.internal_user_primary_email as user_primary_email,
+            internal_users.internal_user_secondary_email as user_secondary_email,
+            internal_users.internal_user_primary_phone_number as user_primary_phone_number,
+            internal_users.internal_user_secondary_phone_number as user_secondary_phone_number,
+            internal_users.internal_user_profile_photo_url as user_profile_photo_url,
+            internal_users.internal_user_position_name as user_position_name,
+            genders.gender_id,
+            genders.gender_technical_name,
+            genders.gender_public_name,
+            countries.country_id,
+            countries.country_short_name,
+            countries.country_official_name,
+            countries.country_alpha_2_code,
+            countries.country_alpha_3_code,
+            countries.country_numeric_code,
+            countries.country_code_top_level_domain,
+            roles.role_id,
+            roles.role_technical_name,
+            roles.role_public_name,
+            roles.role_description,
+            organizations.organization_id,
+            organizations.organization_name,
+            organizations.organization_description,
+            organizations.parent_organization_id,
+            organizations.parent_organization_name,
+            organizations.parent_organization_description,
+            organizations.root_organization_id,
+            organizations.root_organization_name,
+            organizations.root_organization_description
         from
-	        chat_rooms_users_relationship
+            chat_rooms_users_relationship
         left join users on
-	        chat_rooms_users_relationship.user_id = users.user_id
+            chat_rooms_users_relationship.user_id = users.user_id
         left join internal_users on
-	        users.internal_user_id = internal_users.internal_user_id
+            users.internal_user_id = internal_users.internal_user_id
         left join genders on
-	        internal_users.gender_id = genders.gender_id
+            internal_users.gender_id = genders.gender_id
         left join countries on
-	        internal_users.country_id = countries.country_id
+            internal_users.country_id = countries.country_id
         left join roles on
-	        internal_users.role_id = roles.role_id
+            internal_users.role_id = roles.role_id
         left join organizations on
-	        internal_users.organization_id = organizations.organization_id
+            internal_users.organization_id = organizations.organization_id
         where
             chat_rooms_users_relationship.chat_room_id in ({0})
         and
