@@ -402,7 +402,7 @@ def get_client_data(**kwargs) -> None:
     pipe.close()
 
 
-def get_last_message_data(**kwargs) -> Dict[AnyStr]:
+def get_last_message_data(**kwargs) -> Dict[AnyStr, Any]:
     # Check whether the input arguments have keys in their dictionaries.
     try:
         cassandra_connection = kwargs["cassandra_connection"]
