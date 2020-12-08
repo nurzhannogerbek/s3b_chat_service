@@ -1,299 +1,299 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Transform: AWS::Serverless-2016-10-31
+Transform: 'AWS::Serverless-2016-10-31'
 Parameters:
-    CassandraUsername:
-        Type: String
-    CassandraPassword:
-        Type: String
-    CassandraHost:
-        Type: String
-    CassandraPort:
-        Type: String
-    CassandraLocalDC:
-        Type: String
-    CassandraKeyspaceName:
-        Type: String
-    PostgreSQLUsername:
-        Type: String
-    PostgreSQLPassword:
-        Type: String
-    PostgreSQLHost:
-        Type: String
-    PostgreSQLPort:
-        Type: String
-    PostgreSQLDBName:
-        Type: String
-    EnvironmentName:
-        Type: String
-    DatabasesLayerARN:
-        Type: String
-    UtilsLayerARN:
-        Type: String
+  CassandraUsername:
+    Type: String
+  CassandraPassword:
+    Type: String
+  CassandraHost:
+    Type: String
+  CassandraPort:
+    Type: Number
+  CassandraLocalDC:
+    Type: String
+  CassandraKeyspaceName:
+    Type: String
+  PostgreSQLUsername:
+    Type: String
+  PostgreSQLPassword:
+    Type: String
+  PostgreSQLHost:
+    Type: String
+  PostgreSQLPort:
+    Type: Number
+  PostgreSQLDBName:
+    Type: String
+  EnvironmentName:
+    Type: String
+  DatabasesLayerARN:
+    Type: String
+  UtilsLayerARN:
+    Type: String
 Globals:
-    Function:
-        Runtime: python3.8
-        MemorySize: 3008
-        Timeout: 900
-        Environment:
-            Variables:
-                CASSANDRA_USERNAME:
-                    Fn::Sub: "${CassandraUsername}"
-                CASSANDRA_PASSWORD:
-                    Fn::Sub: "${CassandraPassword}"
-                CASSANDRA_HOST:
-                    Fn::Sub: "${CassandraHost}"
-                CASSANDRA_PORT:
-                    Fn::Sub: "${CassandraPort}"
-                CASSANDRA_LOCAL_DC:
-                    Fn::Sub: "${CassandraLocalDC}"
-                CASSANDRA_KEYSPACE_NAME:
-                    Fn::Sub: "${CassandraKeyspaceName}"
-                POSTGRESQL_USERNAME:
-                    Fn::Sub: "${PostgreSQLUsername}"
-                POSTGRESQL_PASSWORD:
-                    Fn::Sub: "${PostgreSQLPassword}"
-                POSTGRESQL_HOST:
-                    Fn::Sub: "${PostgreSQLHost}"
-                POSTGRESQL_PORT:
-                    Fn::Sub: "${PostgreSQLPort}"
-                POSTGRESQL_DB_NAME:
-                    Fn::Sub: "${PostgreSQLDBName}"
+  Function:
+    Runtime: python3.8
+    MemorySize: 10240
+    Timeout: 900
+    Environment:
+      Variables:
+        CASSANDRA_USERNAME:
+          'Fn::Sub': '${CassandraUsername}'
+        CASSANDRA_PASSWORD:
+          'Fn::Sub': '${CassandraPassword}'
+        CASSANDRA_HOST:
+          'Fn::Sub': '${CassandraHost}'
+        CASSANDRA_PORT:
+          'Fn::Sub': '${CassandraPort}'
+        CASSANDRA_LOCAL_DC:
+          'Fn::Sub': '${CassandraLocalDC}'
+        CASSANDRA_KEYSPACE_NAME:
+          'Fn::Sub': '${CassandraKeyspaceName}'
+        POSTGRESQL_USERNAME:
+          'Fn::Sub': '${PostgreSQLUsername}'
+        POSTGRESQL_PASSWORD:
+          'Fn::Sub': '${PostgreSQLPassword}'
+        POSTGRESQL_HOST:
+          'Fn::Sub': '${PostgreSQLHost}'
+        POSTGRESQL_PORT:
+          'Fn::Sub': '${PostgreSQLPort}'
+        POSTGRESQL_DB_NAME:
+          'Fn::Sub': '${PostgreSQLDBName}'
 Resources:
-    GetChatRoomMessages:
-        Type: AWS::Serverless::Function
-        Properties:
-            FunctionName:
-                Fn::Sub: "${EnvironmentName}GetChatRoomMessages"
-            CodeUri: src/aws_lambda_functions/get_chat_room_messages
-            Handler: lambda_function.lambda_handler
-            Layers:
-                - Fn::Sub: "${DatabasesLayerARN}"
-                - Fn::Sub: "${UtilsLayerARN}"
-    CreateChatRoomMessage:
-        Type: AWS::Serverless::Function
-        Properties:
-            FunctionName:
-                Fn::Sub: "${EnvironmentName}CreateChatRoomMessage"
-            CodeUri: src/aws_lambda_functions/create_chat_room_message
-            Handler: lambda_function.lambda_handler
-            Layers:
-                - Fn::Sub: "${DatabasesLayerARN}"
-                - Fn::Sub: "${UtilsLayerARN}"
-    GetChannelsTypesAndChannels:
-        Type: AWS::Serverless::Function
-        Properties:
-            FunctionName:
-                Fn::Sub: "${EnvironmentName}GetChannelsTypesAndChannels"
-            CodeUri: src/aws_lambda_functions/get_channels_types_and_channels
-            Handler: lambda_function.lambda_handler
-            Layers:
-                - Fn::Sub: "${DatabasesLayerARN}"
-                - Fn::Sub: "${UtilsLayerARN}"
-    CreateChatRoom:
-        Type: AWS::Serverless::Function
-        Properties:
-            FunctionName:
-                Fn::Sub: "${EnvironmentName}CreateChatRoom"
-            CodeUri: src/aws_lambda_functions/create_chat_room
-            Handler: lambda_function.lambda_handler
-            Layers:
-                - Fn::Sub: "${DatabasesLayerARN}"
-                - Fn::Sub: "${UtilsLayerARN}"
-    AssignChatRoomOperator:
-        Type: AWS::Serverless::Function
-        Properties:
-            FunctionName:
-                Fn::Sub: "${EnvironmentName}AssignChatRoomOperator"
-            CodeUri: src/aws_lambda_functions/assign_chat_room_operator
-            Handler: lambda_function.lambda_handler
-            Layers:
-                - Fn::Sub: "${DatabasesLayerARN}"
-                - Fn::Sub: "${UtilsLayerARN}"
-    CloseChatRoom:
-        Type: AWS::Serverless::Function
-        Properties:
-            FunctionName:
-                Fn::Sub: "${EnvironmentName}CloseChatRoom"
-            CodeUri: src/aws_lambda_functions/close_chat_room
-            Handler: lambda_function.lambda_handler
-            Layers:
-                - Fn::Sub: "${DatabasesLayerARN}"
-                - Fn::Sub: "${UtilsLayerARN}"
-    UpdateMessageSendingStatus:
-        Type: AWS::Serverless::Function
-        Properties:
-            FunctionName:
-                Fn::Sub: "${EnvironmentName}UpdateMessageSendingStatus"
-            CodeUri: src/aws_lambda_functions/update_message_sending_status
-            Handler: lambda_function.lambda_handler
-    GetNonAcceptedChatRooms:
-        Type: AWS::Serverless::Function
-        Properties:
-            FunctionName:
-                Fn::Sub: "${EnvironmentName}GetNonAcceptedChatRooms"
-            CodeUri: src/aws_lambda_functions/get_non_accepted_chat_rooms
-            Handler: lambda_function.lambda_handler
-            Layers:
-                - Fn::Sub: "${DatabasesLayerARN}"
-                - Fn::Sub: "${UtilsLayerARN}"
-    GetChatRoomInformation:
-        Type: AWS::Serverless::Function
-        Properties:
-            FunctionName:
-                Fn::Sub: "${EnvironmentName}GetChatRoomInformation"
-            CodeUri: src/aws_lambda_functions/get_chat_room_information
-            Handler: lambda_function.lambda_handler
-            Layers:
-                - Fn::Sub: "${DatabasesLayerARN}"
-                - Fn::Sub: "${UtilsLayerARN}"
-    GetAcceptedChatRooms:
-        Type: AWS::Serverless::Function
-        Properties:
-            FunctionName:
-                Fn::Sub: "${EnvironmentName}GetAcceptedChatRooms"
-            CodeUri: src/aws_lambda_functions/get_accepted_chat_rooms
-            Handler: lambda_function.lambda_handler
-            Layers:
-                - Fn::Sub: "${DatabasesLayerARN}"
-                - Fn::Sub: "${UtilsLayerARN}"
-    GetCompletedChatRooms:
-        Type: AWS::Serverless::Function
-        Properties:
-            FunctionName:
-                Fn::Sub: "${EnvironmentName}GetCompletedChatRooms"
-            CodeUri: src/aws_lambda_functions/get_completed_chat_rooms
-            Handler: lambda_function.lambda_handler
-            Layers:
-                - Fn::Sub: "${DatabasesLayerARN}"
-                - Fn::Sub: "${UtilsLayerARN}"
-    ActivateClosedChatRoom:
-        Type: AWS::Serverless::Function
-        Properties:
-            FunctionName:
-                Fn::Sub: "${EnvironmentName}ActivateClosedChatRoom"
-            CodeUri: src/aws_lambda_functions/activate_closed_chat_room
-            Handler: lambda_function.lambda_handler
-            Layers:
-                - Fn::Sub: "${DatabasesLayerARN}"
-                - Fn::Sub: "${UtilsLayerARN}"
-    UpdateMessageStatus:
-        Type: AWS::Serverless::Function
-        Properties:
-            FunctionName:
-                Fn::Sub: "${EnvironmentName}UpdateMessageStatus"
-            CodeUri: src/aws_lambda_functions/update_message_status
-            Handler: lambda_function.lambda_handler
-            Layers:
-                - Fn::Sub: "${DatabasesLayerARN}"
-                - Fn::Sub: "${UtilsLayerARN}"
-    GetChannelOnlineOperators:
-        Type: AWS::Serverless::Function
-        Properties:
-            FunctionName:
-                Fn::Sub: "${EnvironmentName}GetChannelOnlineOperators"
-            CodeUri: src/aws_lambda_functions/get_channel_online_operators
-            Handler: lambda_function.lambda_handler
-            Layers:
-                - Fn::Sub: "${DatabasesLayerARN}"
-                - Fn::Sub: "${UtilsLayerARN}"
-    GetClientChatRooms:
-        Type: AWS::Serverless::Function
-        Properties:
-            FunctionName:
-                Fn::Sub: "${EnvironmentName}GetClientChatRooms"
-            CodeUri: src/aws_lambda_functions/get_client_chat_rooms
-            Handler: lambda_function.lambda_handler
-            Layers:
-                - Fn::Sub: "${DatabasesLayerARN}"
-                - Fn::Sub: "${UtilsLayerARN}"
+  GetChatRoomMessages:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName:
+        'Fn::Sub': '${EnvironmentName}GetChatRoomMessages'
+      CodeUri: src/aws_lambda_functions/get_chat_room_messages
+      Handler: lambda_function.lambda_handler
+      Layers:
+        - 'Fn::Sub': '${DatabasesLayerARN}'
+        - 'Fn::Sub': '${UtilsLayerARN}'
+  CreateChatRoomMessage:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName:
+        'Fn::Sub': '${EnvironmentName}CreateChatRoomMessage'
+      CodeUri: src/aws_lambda_functions/create_chat_room_message
+      Handler: lambda_function.lambda_handler
+      Layers:
+        - 'Fn::Sub': '${DatabasesLayerARN}'
+        - 'Fn::Sub': '${UtilsLayerARN}'
+  GetChannelsTypesAndChannels:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName:
+        'Fn::Sub': '${EnvironmentName}GetChannelsTypesAndChannels'
+      CodeUri: src/aws_lambda_functions/get_channels_types_and_channels
+      Handler: lambda_function.lambda_handler
+      Layers:
+        - 'Fn::Sub': '${DatabasesLayerARN}'
+        - 'Fn::Sub': '${UtilsLayerARN}'
+  CreateChatRoom:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName:
+        'Fn::Sub': '${EnvironmentName}CreateChatRoom'
+      CodeUri: src/aws_lambda_functions/create_chat_room
+      Handler: lambda_function.lambda_handler
+      Layers:
+        - 'Fn::Sub': '${DatabasesLayerARN}'
+        - 'Fn::Sub': '${UtilsLayerARN}'
+  AssignChatRoomOperator:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName:
+        'Fn::Sub': '${EnvironmentName}AssignChatRoomOperator'
+      CodeUri: src/aws_lambda_functions/assign_chat_room_operator
+      Handler: lambda_function.lambda_handler
+      Layers:
+        - 'Fn::Sub': '${DatabasesLayerARN}'
+        - 'Fn::Sub': '${UtilsLayerARN}'
+  CloseChatRoom:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName:
+        'Fn::Sub': '${EnvironmentName}CloseChatRoom'
+      CodeUri: src/aws_lambda_functions/close_chat_room
+      Handler: lambda_function.lambda_handler
+      Layers:
+        - 'Fn::Sub': '${DatabasesLayerARN}'
+        - 'Fn::Sub': '${UtilsLayerARN}'
+  UpdateMessageSendingStatus:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName:
+        'Fn::Sub': '${EnvironmentName}UpdateMessageSendingStatus'
+      CodeUri: src/aws_lambda_functions/update_message_sending_status
+      Handler: lambda_function.lambda_handler
+  GetNonAcceptedChatRooms:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName:
+        'Fn::Sub': '${EnvironmentName}GetNonAcceptedChatRooms'
+      CodeUri: src/aws_lambda_functions/get_non_accepted_chat_rooms
+      Handler: lambda_function.lambda_handler
+      Layers:
+        - 'Fn::Sub': '${DatabasesLayerARN}'
+        - 'Fn::Sub': '${UtilsLayerARN}'
+  GetChatRoomInformation:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName:
+        'Fn::Sub': '${EnvironmentName}GetChatRoomInformation'
+      CodeUri: src/aws_lambda_functions/get_chat_room_information
+      Handler: lambda_function.lambda_handler
+      Layers:
+        - 'Fn::Sub': '${DatabasesLayerARN}'
+        - 'Fn::Sub': '${UtilsLayerARN}'
+  GetAcceptedChatRooms:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName:
+        'Fn::Sub': '${EnvironmentName}GetAcceptedChatRooms'
+      CodeUri: src/aws_lambda_functions/get_accepted_chat_rooms
+      Handler: lambda_function.lambda_handler
+      Layers:
+        - 'Fn::Sub': '${DatabasesLayerARN}'
+        - 'Fn::Sub': '${UtilsLayerARN}'
+  GetCompletedChatRooms:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName:
+        'Fn::Sub': '${EnvironmentName}GetCompletedChatRooms'
+      CodeUri: src/aws_lambda_functions/get_completed_chat_rooms
+      Handler: lambda_function.lambda_handler
+      Layers:
+        - 'Fn::Sub': '${DatabasesLayerARN}'
+        - 'Fn::Sub': '${UtilsLayerARN}'
+  ActivateClosedChatRoom:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName:
+        'Fn::Sub': '${EnvironmentName}ActivateClosedChatRoom'
+      CodeUri: src/aws_lambda_functions/activate_closed_chat_room
+      Handler: lambda_function.lambda_handler
+      Layers:
+        - 'Fn::Sub': '${DatabasesLayerARN}'
+        - 'Fn::Sub': '${UtilsLayerARN}'
+  UpdateMessageStatus:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName:
+        'Fn::Sub': '${EnvironmentName}UpdateMessageStatus'
+      CodeUri: src/aws_lambda_functions/update_message_status
+      Handler: lambda_function.lambda_handler
+      Layers:
+        - 'Fn::Sub': '${DatabasesLayerARN}'
+        - 'Fn::Sub': '${UtilsLayerARN}'
+  GetChannelOnlineOperators:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName:
+        'Fn::Sub': '${EnvironmentName}GetChannelOnlineOperators'
+      CodeUri: src/aws_lambda_functions/get_channel_online_operators
+      Handler: lambda_function.lambda_handler
+      Layers:
+        - 'Fn::Sub': '${DatabasesLayerARN}'
+        - 'Fn::Sub': '${UtilsLayerARN}'
+  GetClientChatRooms:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName:
+        'Fn::Sub': '${EnvironmentName}GetClientChatRooms'
+      CodeUri: src/aws_lambda_functions/get_client_chat_rooms
+      Handler: lambda_function.lambda_handler
+      Layers:
+        - 'Fn::Sub': '${DatabasesLayerARN}'
+        - 'Fn::Sub': '${UtilsLayerARN}'
 Outputs:
-    GetChatRoomMessagesARN:
-        Value:
-            Fn::GetAtt: GetChatRoomMessages.Arn
-        Export:
-            Name:
-                Fn::Sub: "${AWS::StackName}:${EnvironmentName}GetChatRoomMessagesARN"
-    CreateChatRoomMessageARN:
-        Value:
-            Fn::GetAtt: CreateChatRoomMessage.Arn
-        Export:
-            Name:
-                Fn::Sub: "${AWS::StackName}:${EnvironmentName}CreateChatRoomMessageARN"
-    GetChannelsTypesAndChannelsARN:
-        Value:
-            Fn::GetAtt: GetChannelsTypesAndChannels.Arn
-        Export:
-            Name:
-                Fn::Sub: "${AWS::StackName}:${EnvironmentName}GetChannelsTypesAndChannelsARN"
-    CreateChatRoomARN:
-        Value:
-            Fn::GetAtt: CreateChatRoom.Arn
-        Export:
-            Name:
-                Fn::Sub: "${AWS::StackName}:${EnvironmentName}CreateChatRoomARN"
-    AssignChatRoomOperatorARN:
-        Value:
-            Fn::GetAtt: AssignChatRoomOperator.Arn
-        Export:
-            Name:
-                Fn::Sub: "${AWS::StackName}:${EnvironmentName}AssignChatRoomOperatorARN"
-    CloseChatRoomARN:
-        Value:
-            Fn::GetAtt: CloseChatRoom.Arn
-        Export:
-            Name:
-                Fn::Sub: "${AWS::StackName}:${EnvironmentName}CloseChatRoomARN"
-    UpdateMessageSendingStatusARN:
-        Value:
-            Fn::GetAtt: UpdateMessageSendingStatus.Arn
-        Export:
-            Name:
-                Fn::Sub: "${AWS::StackName}:${EnvironmentName}UpdateMessageSendingStatusARN"
-    GetNonAcceptedChatRoomsARN:
-        Value:
-            Fn::GetAtt: GetNonAcceptedChatRooms.Arn
-        Export:
-            Name:
-                Fn::Sub: "${AWS::StackName}:${EnvironmentName}GetNonAcceptedChatRoomsARN"
-    GetChatRoomInformationARN:
-        Value:
-            Fn::GetAtt: GetChatRoomInformation.Arn
-        Export:
-            Name:
-                Fn::Sub: "${AWS::StackName}:${EnvironmentName}GetChatRoomInformationARN"
-    GetAcceptedChatRoomsARN:
-        Value:
-            Fn::GetAtt: GetAcceptedChatRooms.Arn
-        Export:
-            Name:
-                Fn::Sub: "${AWS::StackName}:${EnvironmentName}GetAcceptedChatRoomsARN"
-    GetCompletedChatRoomsARN:
-        Value:
-            Fn::GetAtt: GetCompletedChatRooms.Arn
-        Export:
-            Name:
-                Fn::Sub: "${AWS::StackName}:${EnvironmentName}GetCompletedChatRoomsARN"
-    ActivateClosedChatRoomARN:
-        Value:
-            Fn::GetAtt: ActivateClosedChatRoom.Arn
-        Export:
-            Name:
-                Fn::Sub: "${AWS::StackName}:${EnvironmentName}ActivateClosedChatRoomARN"
-    UpdateMessageStatusARN:
-        Value:
-            Fn::GetAtt: UpdateMessageStatus.Arn
-        Export:
-            Name:
-                Fn::Sub: "${AWS::StackName}:${EnvironmentName}UpdateMessageStatusARN"
-    GetChannelOnlineOperatorsARN:
-        Value:
-            Fn::GetAtt: GetChannelOnlineOperators.Arn
-        Export:
-            Name:
-                Fn::Sub: "${AWS::StackName}:${EnvironmentName}GetChannelOnlineOperatorsARN"
-    GetClientChatRoomsARN:
-        Value:
-            Fn::GetAtt: GetClientChatRooms.Arn
-        Export:
-            Name:
-                Fn::Sub: "${AWS::StackName}:${EnvironmentName}GetClientChatRoomsARN"
+  GetChatRoomMessagesARN:
+    Value:
+      'Fn::GetAtt': GetChatRoomMessages.Arn
+    Export:
+      Name:
+        'Fn::Sub': '${AWS::StackName}:${EnvironmentName}GetChatRoomMessagesARN'
+  CreateChatRoomMessageARN:
+    Value:
+      'Fn::GetAtt': CreateChatRoomMessage.Arn
+    Export:
+      Name:
+        'Fn::Sub': '${AWS::StackName}:${EnvironmentName}CreateChatRoomMessageARN'
+  GetChannelsTypesAndChannelsARN:
+    Value:
+      'Fn::GetAtt': GetChannelsTypesAndChannels.Arn
+    Export:
+      Name:
+        'Fn::Sub': '${AWS::StackName}:${EnvironmentName}GetChannelsTypesAndChannelsARN'
+  CreateChatRoomARN:
+    Value:
+      'Fn::GetAtt': CreateChatRoom.Arn
+    Export:
+      Name:
+        'Fn::Sub': '${AWS::StackName}:${EnvironmentName}CreateChatRoomARN'
+  AssignChatRoomOperatorARN:
+    Value:
+      'Fn::GetAtt': AssignChatRoomOperator.Arn
+    Export:
+      Name:
+        'Fn::Sub': '${AWS::StackName}:${EnvironmentName}AssignChatRoomOperatorARN'
+  CloseChatRoomARN:
+    Value:
+      'Fn::GetAtt': CloseChatRoom.Arn
+    Export:
+      Name:
+        'Fn::Sub': '${AWS::StackName}:${EnvironmentName}CloseChatRoomARN'
+  UpdateMessageSendingStatusARN:
+    Value:
+      'Fn::GetAtt': UpdateMessageSendingStatus.Arn
+    Export:
+      Name:
+        'Fn::Sub': '${AWS::StackName}:${EnvironmentName}UpdateMessageSendingStatusARN'
+  GetNonAcceptedChatRoomsARN:
+    Value:
+      'Fn::GetAtt': GetNonAcceptedChatRooms.Arn
+    Export:
+      Name:
+        'Fn::Sub': '${AWS::StackName}:${EnvironmentName}GetNonAcceptedChatRoomsARN'
+  GetChatRoomInformationARN:
+    Value:
+      'Fn::GetAtt': GetChatRoomInformation.Arn
+    Export:
+      Name:
+        'Fn::Sub': '${AWS::StackName}:${EnvironmentName}GetChatRoomInformationARN'
+  GetAcceptedChatRoomsARN:
+    Value:
+      'Fn::GetAtt': GetAcceptedChatRooms.Arn
+    Export:
+      Name:
+        'Fn::Sub': '${AWS::StackName}:${EnvironmentName}GetAcceptedChatRoomsARN'
+  GetCompletedChatRoomsARN:
+    Value:
+      'Fn::GetAtt': GetCompletedChatRooms.Arn
+    Export:
+      Name:
+        'Fn::Sub': '${AWS::StackName}:${EnvironmentName}GetCompletedChatRoomsARN'
+  ActivateClosedChatRoomARN:
+    Value:
+      'Fn::GetAtt': ActivateClosedChatRoom.Arn
+    Export:
+      Name:
+        'Fn::Sub': '${AWS::StackName}:${EnvironmentName}ActivateClosedChatRoomARN'
+  UpdateMessageStatusARN:
+    Value:
+      'Fn::GetAtt': UpdateMessageStatus.Arn
+    Export:
+      Name:
+        'Fn::Sub': '${AWS::StackName}:${EnvironmentName}UpdateMessageStatusARN'
+  GetChannelOnlineOperatorsARN:
+    Value:
+      'Fn::GetAtt': GetChannelOnlineOperators.Arn
+    Export:
+      Name:
+        'Fn::Sub': '${AWS::StackName}:${EnvironmentName}GetChannelOnlineOperatorsARN'
+  GetClientChatRoomsARN:
+    Value:
+      'Fn::GetAtt': GetClientChatRooms.Arn
+    Export:
+      Name:
+        'Fn::Sub': '${AWS::StackName}:${EnvironmentName}GetClientChatRoomsARN'

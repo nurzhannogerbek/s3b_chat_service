@@ -1,12 +1,10 @@
 image:
-  name: python:3.8
-
-deploy: &deploy
-  - step:
+  name: 'python:3.8'
+deploy:
+  - step: &deploy
       script:
-        - >
-          if [ $BITBUCKET_BRANCH == "develop" ];
-          then
+        - |
+          if [ $BITBUCKET_BRANCH == 'develop' ]; then
             export CASSANDRA_USERNAME=$DEV_CASSANDRA_USERNAME
             export CASSANDRA_PASSWORD=$DEV_CASSANDRA_PASSWORD
             export CASSANDRA_HOST=$DEV_CASSANDRA_HOST
@@ -18,15 +16,14 @@ deploy: &deploy
             export POSTGRESQL_HOST=$DEV_POSTGRESQL_HOST
             export POSTGRESQL_PORT=$DEV_POSTGRESQL_PORT
             export POSTGRESQL_DB_NAME=$DEV_POSTGRESQL_DB_NAME
-            export S3_BUCKET="dev-3beep-chat-service"
-            export STACK_NAME="Dev3beepChatService"
-            export ENVIRONMENT_NAME="Dev"
-            export DATABASES_LAYER_NAME="DevDatabases"
-            export UTILS_LAYER_NAME="DevUtils"
+            export S3_BUCKET='dev-3beep-chat-service'
+            export STACK_NAME='Dev3beepChatService'
+            export ENVIRONMENT_NAME='Dev'
+            export DATABASES_LAYER_NAME='DevDatabases'
+            export UTILS_LAYER_NAME='DevUtils'
           fi
-        - >
-          if [ $BITBUCKET_BRANCH == "master" ];
-          then
+        - |
+          if [ $BITBUCKET_BRANCH == 'master' ]; then
             export CASSANDRA_USERNAME=$PROD_CASSANDRA_USERNAME
             export CASSANDRA_PASSWORD=$PROD_CASSANDRA_PASSWORD
             export CASSANDRA_HOST=$PROD_CASSANDRA_HOST
@@ -38,94 +35,102 @@ deploy: &deploy
             export POSTGRESQL_HOST=$PROD_POSTGRESQL_HOST
             export POSTGRESQL_PORT=$PROD_POSTGRESQL_PORT
             export POSTGRESQL_DB_NAME=$PROD_POSTGRESQL_DB_NAME
-            export S3_BUCKET="prod-3beep-chat-service"
-            export STACK_NAME="Prod3beepChatService"
-            export ENVIRONMENT_NAME="Prod"
-            export DATABASES_LAYER_NAME="ProdDatabases"
-            export UTILS_LAYER_NAME="ProdUtils"
+            export S3_BUCKET='prod-3beep-chat-service'
+            export STACK_NAME='Prod3beepChatService'
+            export ENVIRONMENT_NAME='Prod'
+            export DATABASES_LAYER_NAME='ProdDatabases'
+            export UTILS_LAYER_NAME='ProdUtils'
           fi
         - apt-get update && apt-get install -y python3-pip
         - pip3 install -U awscli
         - aws configure set default.region $AWS_DEFAULT_REGION
         - aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
         - aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
-        - export DATABASES_LAYER_ARN=$(aws lambda list-layer-versions --layer-name $DATABASES_LAYER_NAME --query 'max_by(LayerVersions, &Version).LayerVersionArn'  --output text)
-        - export UTILS_LAYER_ARN=$(aws lambda list-layer-versions --layer-name $UTILS_LAYER_NAME --query 'max_by(LayerVersions, &Version).LayerVersionArn'  --output text)
-        - pipe: atlassian/aws-sam-deploy:0.5.2
+        - >-
+          export DATABASES_LAYER_ARN=$(aws lambda list-layer-versions
+          --layer-name $DATABASES_LAYER_NAME --query 'max_by(LayerVersions,
+          &Version).LayerVersionArn'  --output text)
+        - >-
+          export UTILS_LAYER_ARN=$(aws lambda list-layer-versions --layer-name
+          $UTILS_LAYER_NAME --query 'max_by(LayerVersions,
+          &Version).LayerVersionArn'  --output text)
+        - pipe: 'atlassian/aws-sam-deploy:0.5.2'
           variables:
             AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
             AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
             AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION
             S3_BUCKET: $S3_BUCKET
             STACK_NAME: $STACK_NAME
-            CAPABILITIES: ['CAPABILITY_IAM', 'CAPABILITY_NAMED_IAM', 'CAPABILITY_AUTO_EXPAND']
-            SAM_TEMPLATE: 'template.yaml'
-            STACK_PARAMETERS: >
+            CAPABILITIES:
+              - CAPABILITY_IAM
+              - CAPABILITY_NAMED_IAM
+              - CAPABILITY_AUTO_EXPAND
+            SAM_TEMPLATE: template.yaml
+            STACK_PARAMETERS: |
               [
                 {
-                  "ParameterKey": "CassandraUsername",
-                  "ParameterValue": ${CASSANDRA_USERNAME}
+                  'ParameterKey': 'CassandraUsername',
+                  'ParameterValue': '${CASSANDRA_USERNAME}'
                 },
                 {
-                  "ParameterKey": "CassandraPassword",
-                  "ParameterValue": ${CASSANDRA_PASSWORD}
+                  'ParameterKey': 'CassandraPassword',
+                  'ParameterValue': '${CASSANDRA_PASSWORD}'
                 },
                 {
-                  "ParameterKey": "CassandraHost",
-                  "ParameterValue": ${CASSANDRA_HOST}
+                  'ParameterKey': 'CassandraHost',
+                  'ParameterValue': '${CASSANDRA_HOST}'
                 },
                 {
                   "ParameterKey": "CassandraPort",
-                  "ParameterValue": "9142"
+                  "ParameterValue": "${CASSANDRA_PORT}"
                 },
                 {
                   "ParameterKey": "CassandraLocalDC",
-                  "ParameterValue": ${CASSANDRA_LOCAL_DC}
+                  "ParameterValue": "${CASSANDRA_LOCAL_DC}"
                 },
                 {
                   "ParameterKey": "CassandraKeyspaceName",
-                  "ParameterValue": ${CASSANDRA_KEYSPACE_NAME}
+                  "ParameterValue": "${CASSANDRA_KEYSPACE_NAME}"
                 },
                 {
                   "ParameterKey": "PostgreSQLUsername",
-                  "ParameterValue": ${POSTGRESQL_USERNAME}
+                  "ParameterValue": "${POSTGRESQL_USERNAME}"
                 },
                 {
                   "ParameterKey": "PostgreSQLPassword",
-                  "ParameterValue": ${POSTGRESQL_PASSWORD}
+                  "ParameterValue": "${POSTGRESQL_PASSWORD}"
                 },
                 {
                   "ParameterKey": "PostgreSQLHost",
-                  "ParameterValue": ${POSTGRESQL_HOST}
+                  "ParameterValue": "${POSTGRESQL_HOST}"
                 },
                 {
                   "ParameterKey": "PostgreSQLPort",
-                  "ParameterValue": "5432"
+                  "ParameterValue": "${POSTGRESQL_PORT}"
                 },
                 {
                   "ParameterKey": "PostgreSQLDBName",
-                  "ParameterValue": ${POSTGRESQL_DB_NAME}
+                  "ParameterValue": "${POSTGRESQL_DB_NAME}"
                 },
                 {
                   "ParameterKey": "EnvironmentName",
-                  "ParameterValue": ${ENVIRONMENT_NAME}
+                  "ParameterValue": "${ENVIRONMENT_NAME}"
                 },
                 {
                   "ParameterKey": "DatabasesLayerARN",
-                  "ParameterValue": ${DATABASES_LAYER_ARN}
+                  "ParameterValue": "${DATABASES_LAYER_ARN}"
                 },
                 {
                   "ParameterKey": "UtilsLayerARN",
-                  "ParameterValue": ${UTILS_LAYER_ARN}
+                  "ParameterValue": "${UTILS_LAYER_ARN}"
                 }
               ]
             WAIT: 'true'
             WAIT_INTERVAL: 60
             DEBUG: 'true'
-
 pipelines:
   branches:
     develop:
-      - <<: *deploy
+      - step: *deploy
     master:
-      - <<: *deploy
+      - step: *deploy
