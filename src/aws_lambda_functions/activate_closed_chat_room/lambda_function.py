@@ -642,9 +642,10 @@ def analyze_and_format_data(**kwargs) -> None:
     pipe.close()
 
 
-def lambda_handler(event):
+def lambda_handler(event, context):
     """
     :param event: The AWS Lambda function uses this parameter to pass in event data to the handler.
+    :param context: The AWS Lambda function uses this parameter to provide runtime information to your handler.
     """
     # Run several functions related to initialization processes in parallel.
     results_of_processes = execute_parallel_processes([
