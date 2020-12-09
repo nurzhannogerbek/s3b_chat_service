@@ -153,13 +153,20 @@ def psycopg2_cursor(function):
     @wraps(function)
     def wrapper(**kwargs):
         try:
-            postgresql_connection = kwargs["postgresql_connection"]
-        except KeyError as error:
+            postgresql_connection = databases.create_postgresql_connection(
+                POSTGRESQL_USERNAME,
+                POSTGRESQL_PASSWORD,
+                POSTGRESQL_HOST,
+                POSTGRESQL_PORT,
+                POSTGRESQL_DB_NAME
+            )
+        except Exception as error:
             logger.error(error)
-            raise Exception(error)
+            raise Exception("Unable to connect to the PostgreSQL database.")
         cursor = postgresql_connection.cursor(cursor_factory=RealDictCursor)
         result = function(cursor=cursor, **kwargs)
         cursor.close()
+        postgresql_connection.close()
         return result
     return wrapper
 
@@ -626,25 +633,36 @@ def lambda_handler(event, context):
                 logger.error(error)
                 raise Exception(error)
 
-    # Define a variable that stores information about aggregated data.
-    aggregated_data = get_aggregated_data(
-        postgresql_connection=postgresql_connection,
-        sql_arguments={
-            "chat_room_id": chat_room_id
+    # Run several functions in parallel to get all the necessary data from different database tables.
+    results_of_processes = execute_parallel_processes[
+        {
+            "function_object": get_aggregated_data,
+            "function_arguments": {
+                "postgresql_connection": postgresql_connection,
+                "sql_arguments": {
+                    "chat_room_id": chat_room_id
+                }
+            }
+        },
+        {
+            "function_object": get_client_data,
+            "function_arguments": {
+                "postgresql_connection": postgresql_connection,
+                "sql_arguments": {
+                    "client_id": client_id
+                }
+            }
         }
-    )["aggregated_data"]
+    ]
+    # Define a variable that stores information about aggregated data.
+    aggregated_data = results_of_processes["aggregated_data"]
 
     # Return a message to the client that there is no data for the chat room.
     if not aggregated_data:
         raise Exception("The data is not found in the database. Check the chat room id.")
 
     # Define a variable that stores information about client data.
-    client_data = get_client_data(
-        postgresql_connection=postgresql_connection,
-        sql_arguments={
-            "client_id": client_id
-        }
-    )["client_data"]
+    client_data = results_of_processes["client_data"]
 
     # Return a message to the client that there is no data for the client.
     if not client_data:
