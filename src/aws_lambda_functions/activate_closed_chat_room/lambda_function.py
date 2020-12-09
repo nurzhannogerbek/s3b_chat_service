@@ -115,23 +115,6 @@ def check_input_arguments(**kwargs) -> Dict[AnyStr, Any]:
     }
 
 
-def reuse_or_recreate_postgresql_connection() -> connection:
-    global POSTGRESQL_CONNECTION
-    if not POSTGRESQL_CONNECTION:
-        try:
-            POSTGRESQL_CONNECTION = databases.create_postgresql_connection(
-                POSTGRESQL_USERNAME,
-                POSTGRESQL_PASSWORD,
-                POSTGRESQL_HOST,
-                POSTGRESQL_PORT,
-                POSTGRESQL_DB_NAME
-            )
-        except Exception as error:
-            logger.error(error)
-            raise Exception("Unable to connect to the PostgreSQL database.")
-    return POSTGRESQL_CONNECTION
-
-
 def reuse_or_recreate_cassandra_connection() -> Session:
     global CASSANDRA_CONNECTION
     if not CASSANDRA_CONNECTION:
@@ -172,7 +155,7 @@ def psycopg2_cursor(function):
 
 
 @psycopg2_cursor
-def get_aggregated_data(**kwargs) -> Dict[AnyStr, Any]:
+def get_aggregated_data(**kwargs) -> None:
     # Check whether the input arguments have keys in their dictionaries.
     try:
         cursor = kwargs["cursor"]
@@ -249,7 +232,7 @@ def get_aggregated_data(**kwargs) -> Dict[AnyStr, Any]:
 
 
 @psycopg2_cursor
-def get_client_data(**kwargs) -> Dict[AnyStr, Any]:
+def get_client_data(**kwargs) -> None:
     # Check whether the input arguments have keys in their dictionaries.
     try:
         cursor = kwargs["cursor"]
@@ -622,7 +605,6 @@ def lambda_handler(event, context):
     client_id = input_arguments["client_id"]
 
     # Define the instances of the database connections.
-    postgresql_connection = reuse_or_recreate_postgresql_connection()
     cassandra_connection = reuse_or_recreate_cassandra_connection()
 
     # This peace of code fix ERROR NoHostAvailable: ("Unable to complete the operation against any hosts").
@@ -650,7 +632,6 @@ def lambda_handler(event, context):
         {
             "function_object": get_aggregated_data,
             "function_arguments": {
-                "postgresql_connection": postgresql_connection,
                 "sql_arguments": {
                     "chat_room_id": chat_room_id
                 }
@@ -659,7 +640,6 @@ def lambda_handler(event, context):
         {
             "function_object": get_client_data,
             "function_arguments": {
-                "postgresql_connection": postgresql_connection,
                 "sql_arguments": {
                     "client_id": client_id
                 }
@@ -722,7 +702,6 @@ def lambda_handler(event, context):
 
     # Define a variable that stores information about the status of the chat room.
     chat_room_status = update_chat_room_status(
-        postgresql_connection=postgresql_connection,
         sql_arguments={
             "chat_room_id": chat_room_id
         }
