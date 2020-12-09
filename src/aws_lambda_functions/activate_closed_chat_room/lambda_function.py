@@ -684,9 +684,9 @@ def lambda_handler(event, context):
     delete_completed_chat_room(
         cassandra_connection=cassandra_connection,
         cql_arguments={
-            "operator_id": operator_id,
-            "channel_id": channel_id,
-            "chat_room_id": chat_room_id
+            "operator_id": uuid.UUID(operator_id),
+            "channel_id": uuid.UUID(channel_id),
+            "chat_room_id": uuid.UUID(chat_room_id)
         }
     )
 
