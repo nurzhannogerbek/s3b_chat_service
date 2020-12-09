@@ -628,7 +628,7 @@ def lambda_handler(event, context):
                 raise Exception(error)
 
     # Run several functions in parallel to get all the necessary data from different database tables.
-    results_of_processes = execute_parallel_processes[
+    results_of_processes = execute_parallel_processes([
         {
             "function_object": get_aggregated_data,
             "function_arguments": {
@@ -645,7 +645,7 @@ def lambda_handler(event, context):
                 }
             }
         }
-    ]
+    ])
     # Define a variable that stores information about aggregated data.
     aggregated_data = results_of_processes["aggregated_data"]
 
