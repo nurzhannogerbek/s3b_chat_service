@@ -6,6 +6,7 @@ from psycopg2.extensions import connection
 from cassandra.cluster import Session
 from functools import wraps
 from typing import *
+import uuid
 import databases
 import utils
 
@@ -437,7 +438,7 @@ def create_non_accepted_chat_room(**kwargs) -> None:
         """
 
         # Add or update the value of the argument.
-        arguments["organization_id"] = organization_id
+        arguments["organization_id"] = uuid.UUID(organization_id)
 
         # Execute the CQL query dynamically, in a convenient and safe way.
         try:
@@ -658,9 +659,9 @@ def lambda_handler(event, context):
     last_message_data = get_last_message_data(
         cassandra_connection=cassandra_connection,
         cql_arguments={
-            "operator_id": operator_id,
-            "channel_id": channel_id,
-            "chat_room_id": chat_room_id
+            "operator_id": uuid.UUID(operator_id),
+            "channel_id": uuid.UUID(channel_id),
+            "chat_room_id": uuid.UUID(chat_room_id)
         }
     )["last_message_data"]
 
@@ -673,9 +674,9 @@ def lambda_handler(event, context):
         cassandra_connection=cassandra_connection,
         cql_arguments={
             "organizations_ids": organizations_ids,
-            "channel_id": channel_id,
-            "chat_room_id": chat_room_id,
-            "client_id": client_id,
+            "channel_id": uuid.UUID(channel_id),
+            "chat_room_id": uuid.UUID(chat_room_id),
+            "client_id": uuid.UUID(client_id),
             "last_message_content": last_message_content,
             "last_message_date_time": last_message_date_time
         }
