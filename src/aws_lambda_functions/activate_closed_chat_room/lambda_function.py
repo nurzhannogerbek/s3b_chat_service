@@ -634,7 +634,7 @@ def lambda_handler(event, context):
     )["aggregated_data"]
 
     # Return a message to the client that there is no data for the chat room.
-    if aggregated_data:
+    if not aggregated_data:
         raise Exception("The data is not found in the database. Check the chat room id.")
 
     # Define a variable that stores information about client data.
@@ -646,7 +646,7 @@ def lambda_handler(event, context):
     )["client_data"]
 
     # Return a message to the client that there is no data for the client.
-    if client_data:
+    if not client_data:
         raise Exception("The data is not found in the database. Check the client id.")
 
     # Define a few necessary variables that will be used in the future.
