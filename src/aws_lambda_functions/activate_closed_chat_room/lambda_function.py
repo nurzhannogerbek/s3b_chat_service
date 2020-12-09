@@ -415,11 +415,6 @@ def create_non_accepted_chat_room(**kwargs) -> None:
     except KeyError as error:
         logger.error(error)
         raise Exception(error)
-    try:
-        pipe = kwargs["pipe"]
-    except KeyError as error:
-        logger.error(error)
-        raise Exception(error)
 
     # For each organization that can serve the chat room, we create an entry in the database.
     for organization_id in organizations_ids:
@@ -452,9 +447,8 @@ def create_non_accepted_chat_room(**kwargs) -> None:
             logger.error(error)
             raise Exception(error)
 
-    # Send data to the pipe and then close it.
-    pipe.send({})
-    pipe.close()
+    # Return nothing.
+    return None
 
 
 def delete_completed_chat_room(**kwargs) -> None:
@@ -466,11 +460,6 @@ def delete_completed_chat_room(**kwargs) -> None:
         raise Exception(error)
     try:
         arguments = kwargs["cql_arguments"]
-    except KeyError as error:
-        logger.error(error)
-        raise Exception(error)
-    try:
-        pipe = kwargs["pipe"]
     except KeyError as error:
         logger.error(error)
         raise Exception(error)
@@ -494,9 +483,8 @@ def delete_completed_chat_room(**kwargs) -> None:
         logger.error(error)
         raise Exception(error)
 
-    # Send data to the pipe and then close it.
-    pipe.send({})
-    pipe.close()
+    # Return nothing.
+    return None
 
 
 @psycopg2_cursor
@@ -682,33 +670,25 @@ def lambda_handler(event, context):
     last_message_date_time = last_message_data.get("last_message_date_time", None)
 
     # Run several related functions to update/delete all necessary data in different databases tables.
-    execute_parallel_processes([
-        {
-            "function_object": create_non_accepted_chat_room,
-            "function_arguments": {
-                "cassandra_connection": cassandra_connection,
-                "cql_arguments": {
-                    "organizations_ids": organizations_ids,
-                    "channel_id": uuid.UUID(channel_id),
-                    "chat_room_id": uuid.UUID(chat_room_id),
-                    "client_id": uuid.UUID(client_id),
-                    "last_message_content": last_message_content,
-                    "last_message_date_time": last_message_date_time
-                }
-            }
-        },
-        {
-            "function_object": delete_completed_chat_room,
-            "function_arguments": {
-                "cassandra_connection": cassandra_connection,
-                "cql_arguments": {
-                    "operator_id": uuid.UUID(operator_id),
-                    "channel_id": uuid.UUID(channel_id),
-                    "chat_room_id": uuid.UUID(chat_room_id)
-                }
-            }
+    create_non_accepted_chat_room(
+        cassandra_connection=cassandra_connection,
+        cql_arguments={
+            "organizations_ids": organizations_ids,
+            "channel_id": uuid.UUID(channel_id),
+            "chat_room_id": uuid.UUID(chat_room_id),
+            "client_id": uuid.UUID(client_id),
+            "last_message_content": last_message_content,
+            "last_message_date_time": last_message_date_time
         }
-    ])
+    )
+    delete_completed_chat_room(
+        cassandra_connection=cassandra_connection,
+        cql_arguments={
+            "operator_id": uuid.UUID(operator_id),
+            "channel_id": uuid.UUID(channel_id),
+            "chat_room_id": uuid.UUID(chat_room_id)
+        }
+    )
 
     # Define a variable that stores information about the status of the chat room.
     chat_room_status = update_chat_room_status(
