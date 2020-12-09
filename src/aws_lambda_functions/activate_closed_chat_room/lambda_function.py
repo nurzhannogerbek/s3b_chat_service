@@ -542,7 +542,7 @@ def analyze_and_format_aggregated_data(**kwargs) -> None:
     # Format the aggregated data.
     channel = {}
     channel_type = {}
-    if not aggregated_data:
+    if aggregated_data:
         for key, value in aggregated_data.items():
             if any([i in key for i in ["channel_type_id", "channel_type_name", "channel_type_description"]]):
                 channel_type[utils.camel_case(key)] = value
@@ -572,7 +572,7 @@ def analyze_and_format_client_data(**kwargs) -> None:
 
     # Format the client data.
     client = {}
-    if not client_data:
+    if client_data:
         gender = {}
         country = {}
         for key, value in client_data.items():
