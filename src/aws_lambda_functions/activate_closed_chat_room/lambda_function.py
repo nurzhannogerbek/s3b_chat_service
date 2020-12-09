@@ -2,6 +2,8 @@ import logging
 import os
 from multiprocessing import Process, Pipe
 from psycopg2.extras import RealDictCursor
+from psycopg2.extensions import connection
+from cassandra.cluster import Session
 from functools import wraps
 from typing import *
 import databases
@@ -28,41 +30,6 @@ CASSANDRA_KEYSPACE_NAME = os.environ["CASSANDRA_KEYSPACE_NAME"]
 # Any subsequent call to the function will use the same database connection until the container stops.
 POSTGRESQL_CONNECTION = None
 CASSANDRA_CONNECTION = None
-
-
-def check_input_arguments(**kwargs) -> Dict[AnyStr, Any]:
-    # Check whether the required input arguments of the AWS Lambda function have keys in their dictionaries.
-    try:
-        event = kwargs["event"]
-    except KeyError as error:
-        logger.error(error)
-        raise Exception(error)
-    try:
-        arguments = event["arguments"]
-    except KeyError as error:
-        logger.error(error)
-        raise Exception(error)
-    try:
-        input = arguments["input"]
-    except KeyError as error:
-        logger.error(error)
-        raise Exception(error)
-    try:
-        chat_room_id = input["chatRoomId"]
-    except KeyError as error:
-        logger.error(error)
-        raise Exception(error)
-    try:
-        client_id = input["clientId"]
-    except KeyError as error:
-        logger.error(error)
-        raise Exception(error)
-
-    # Create the response structure and return it.
-    return {
-            "chat_room_id": chat_room_id,
-            "client_id": client_id
-    }
 
 
 def execute_parallel_processes(functions: List[Dict[AnyStr, Union[Callable, Dict[AnyStr, Any]]]]) -> Dict[AnyStr, Any]:
@@ -112,6 +79,75 @@ def execute_parallel_processes(functions: List[Dict[AnyStr, Union[Callable, Dict
     return results
 
 
+def check_input_arguments(**kwargs) -> Dict[AnyStr, Any]:
+    # Check whether the required input arguments of the AWS Lambda function have keys in their dictionaries.
+    try:
+        event = kwargs["event"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        arguments = event["arguments"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        input = arguments["input"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        chat_room_id = input["chatRoomId"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        client_id = input["clientId"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+
+    # Create the response structure and return it.
+    return {
+            "chat_room_id": chat_room_id,
+            "client_id": client_id
+    }
+
+
+def reuse_or_recreate_postgresql_connection() -> connection:
+    global POSTGRESQL_CONNECTION
+    if not POSTGRESQL_CONNECTION:
+        try:
+            POSTGRESQL_CONNECTION = databases.create_postgresql_connection(
+                POSTGRESQL_USERNAME,
+                POSTGRESQL_PASSWORD,
+                POSTGRESQL_HOST,
+                POSTGRESQL_PORT,
+                POSTGRESQL_DB_NAME
+            )
+        except Exception as error:
+            logger.error(error)
+            raise Exception("Unable to connect to the PostgreSQL database.")
+    return POSTGRESQL_CONNECTION
+
+
+def reuse_or_recreate_cassandra_connection() -> Session:
+    global CASSANDRA_CONNECTION
+    if not CASSANDRA_CONNECTION:
+        try:
+            CASSANDRA_CONNECTION = databases.create_cassandra_connection(
+                CASSANDRA_USERNAME,
+                CASSANDRA_PASSWORD,
+                CASSANDRA_HOST,
+                CASSANDRA_PORT,
+                CASSANDRA_LOCAL_DC
+            )
+        except Exception as error:
+            logger.error(error)
+            raise Exception("Unable to connect to the Cassandra database.")
+    return CASSANDRA_CONNECTION
+
+
 def psycopg2_cursor(function):
     @wraps(function)
     def wrapper(**kwargs):
@@ -128,7 +164,7 @@ def psycopg2_cursor(function):
 
 
 @psycopg2_cursor
-def get_aggregated_data(**kwargs) -> None:
+def get_aggregated_data(**kwargs) -> Dict[AnyStr, Any]:
     # Check whether the input arguments have keys in their dictionaries.
     try:
         cursor = kwargs["cursor"]
@@ -137,11 +173,6 @@ def get_aggregated_data(**kwargs) -> None:
         raise Exception(error)
     try:
         arguments = kwargs["sql_arguments"]
-    except KeyError as error:
-        logger.error(error)
-        raise Exception(error)
-    try:
-        pipe = kwargs["pipe"]
     except KeyError as error:
         logger.error(error)
         raise Exception(error)
@@ -197,15 +228,14 @@ def get_aggregated_data(**kwargs) -> None:
         logger.error(error)
         raise Exception(error)
 
-    # Send data to the pipe and then close it.
-    pipe.send({
+    # Create the response structure and return it.
+    return {
         "aggregated_data": cursor.fetchone()
-    })
-    pipe.close()
+    }
 
 
 @psycopg2_cursor
-def get_client_data(**kwargs) -> None:
+def get_client_data(**kwargs) -> Dict[AnyStr, Any]:
     # Check whether the input arguments have keys in their dictionaries.
     try:
         cursor = kwargs["cursor"]
@@ -214,11 +244,6 @@ def get_client_data(**kwargs) -> None:
         raise Exception(error)
     try:
         arguments = kwargs["sql_arguments"]
-    except KeyError as error:
-        logger.error(error)
-        raise Exception(error)
-    try:
-        pipe = kwargs["pipe"]
     except KeyError as error:
         logger.error(error)
         raise Exception(error)
@@ -324,11 +349,10 @@ def get_client_data(**kwargs) -> None:
         logger.error(error)
         raise Exception(error)
 
-    # Send data to the pipe and then close it.
-    pipe.send({
+    # Create the response structure and return it.
+    return {
         "client_data": cursor.fetchone()
-    })
-    pipe.close()
+    }
 
 
 def get_last_message_data(**kwargs) -> Dict[AnyStr, Any]:
@@ -390,11 +414,6 @@ def create_non_accepted_chat_room(**kwargs) -> None:
     except KeyError as error:
         logger.error(error)
         raise Exception(error)
-    try:
-        pipe = kwargs["pipe"]
-    except KeyError as error:
-        logger.error(error)
-        raise Exception(error)
 
     # For each organization that can serve the chat room, we create an entry in the database.
     for organization_id in organizations_ids:
@@ -427,13 +446,12 @@ def create_non_accepted_chat_room(**kwargs) -> None:
             logger.error(error)
             raise Exception(error)
 
-    # Send data to the pipe and then close it.
-    pipe.send({})
-    pipe.close()
+    # Return nothing.
+    return None
 
 
 @psycopg2_cursor
-def update_chat_room_status(**kwargs) -> None:
+def update_chat_room_status(**kwargs) -> Dict[AnyStr, Any]:
     # Check whether the input arguments have keys in their dictionaries.
     try:
         cursor = kwargs["cursor"]
@@ -442,11 +460,6 @@ def update_chat_room_status(**kwargs) -> None:
         raise Exception(error)
     try:
         arguments = kwargs["sql_arguments"]
-    except KeyError as error:
-        logger.error(error)
-        raise Exception(error)
-    try:
-        pipe = kwargs["pipe"]
     except KeyError as error:
         logger.error(error)
         raise Exception(error)
@@ -470,11 +483,10 @@ def update_chat_room_status(**kwargs) -> None:
         logger.error(error)
         raise Exception(error)
 
-    # Send data to the pipe and then close it.
-    pipe.send({
+    # Create the response structure and return it.
+    return {
         "chat_room_status": cursor.fetchone()["chat_room_status"]
-    })
-    pipe.close()
+    }
 
 
 def delete_completed_chat_room(**kwargs) -> None:
@@ -486,11 +498,6 @@ def delete_completed_chat_room(**kwargs) -> None:
         raise Exception(error)
     try:
         arguments = kwargs["cql_arguments"]
-    except KeyError as error:
-        logger.error(error)
-        raise Exception(error)
-    try:
-        pipe = kwargs["pipe"]
     except KeyError as error:
         logger.error(error)
         raise Exception(error)
@@ -514,20 +521,14 @@ def delete_completed_chat_room(**kwargs) -> None:
         logger.error(error)
         raise Exception(error)
 
-    # Send data to the pipe and then close it.
-    pipe.send({})
-    pipe.close()
+    # Return nothing.
+    return None
 
 
-def analyze_and_format_data(**kwargs) -> None:
+def analyze_and_format_aggregated_data(**kwargs) -> None:
     # Check whether the input arguments have keys in their dictionaries.
     try:
         aggregated_data = kwargs["aggregated_data"]
-    except KeyError as error:
-        logger.error(error)
-        raise Exception(error)
-    try:
-        client_data = kwargs["client_data"]
     except KeyError as error:
         logger.error(error)
         raise Exception(error)
@@ -548,6 +549,26 @@ def analyze_and_format_data(**kwargs) -> None:
                 channel[utils.camel_case(key)] = value
             channel["channelType"] = channel_type
 
+    # Send data to the pipe and then close it.
+    pipe.send({
+        "channel": channel
+    })
+    pipe.close()
+
+
+def analyze_and_format_client_data(**kwargs) -> None:
+    # Check whether the input arguments have keys in their dictionaries.
+    try:
+        client_data = kwargs["client_data"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        pipe = kwargs["pipe"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+
     # Format the client data.
     client = {}
     if not client_data:
@@ -565,7 +586,6 @@ def analyze_and_format_data(**kwargs) -> None:
 
     # Send data to the pipe and then close it.
     pipe.send({
-        "channel": channel,
         "client": client
     })
     pipe.close()
@@ -581,87 +601,20 @@ def lambda_handler(event, context):
     chat_room_id = input_arguments["chat_room_id"]
     client_id = input_arguments["client_id"]
 
-    # Reuse or recreate PostgreSQL connection.
-    global POSTGRESQL_CONNECTION
-    if not POSTGRESQL_CONNECTION:
-        try:
-            POSTGRESQL_CONNECTION = databases.create_postgresql_connection(
-                POSTGRESQL_USERNAME,
-                POSTGRESQL_PASSWORD,
-                POSTGRESQL_HOST,
-                POSTGRESQL_PORT,
-                POSTGRESQL_DB_NAME
-            )
-        except Exception as error:
-            logger.error(error)
-            raise Exception("Unable to connect to the PostgreSQL database.")
-
-    # Reuse or recreate Cassandra connection.
-    global CASSANDRA_CONNECTION
-    if not CASSANDRA_CONNECTION:
-        try:
-            CASSANDRA_CONNECTION = databases.create_cassandra_connection(
-                CASSANDRA_USERNAME,
-                CASSANDRA_PASSWORD,
-                CASSANDRA_HOST,
-                CASSANDRA_PORT,
-                CASSANDRA_LOCAL_DC
-            )
-        except Exception as error:
-            logger.error(error)
-            raise Exception("Unable to connect to the Cassandra database.")
-
-    # Run several functions in parallel to get all necessary data from different databases tables.
-    results_of_processes = execute_parallel_processes([
-        {
-            "function_object": get_aggregated_data,
-            "function_arguments": {
-                "postgresql_connection": POSTGRESQL_CONNECTION,
-                "sql_arguments": {
-                    "chat_room_id": chat_room_id
-                }
-            }
-        },
-        {
-            "function_object": get_client_data,
-            "function_arguments": {
-                "postgresql_connection": POSTGRESQL_CONNECTION,
-                "sql_arguments": {
-                    "client_id": client_id
-                }
-            }
-        }
-    ])
-
-    # Define a variable that stores information about aggregated data.
-    aggregated_data = results_of_processes["aggregated_data"]
-
-    # Return a message to the client that there is no data for the chat room.
-    if aggregated_data:
-        raise Exception("The data is not found in the database. Check the chat room id.")
-
-    # Define a few necessary variables that will be used in the future.
-    operator_id = aggregated_data["operator_id"]
-    channel_id = aggregated_data["channel_id"]
-    organizations_ids = aggregated_data["organizations_ids"]
-
-    # Define a variable that stores information about client data.
-    client_data = results_of_processes["client_data"]
-
-    # Return a message to the client that there is no data for the client.
-    if client_data:
-        raise Exception("The data is not found in the database. Check the client id.")
+    # Define the instances of the database connections.
+    postgresql_connection = reuse_or_recreate_postgresql_connection()
+    cassandra_connection = reuse_or_recreate_cassandra_connection()
 
     # This peace of code fix ERROR NoHostAvailable: ("Unable to complete the operation against any hosts").
     success = False
     while not success:
         try:
-            CASSANDRA_CONNECTION.set_keyspace(CASSANDRA_KEYSPACE_NAME)
+            cassandra_connection.set_keyspace(CASSANDRA_KEYSPACE_NAME)
             success = True
         except Exception as error:
             logger.warning(error)
             try:
-                CASSANDRA_CONNECTION = databases.create_cassandra_connection(
+                cassandra_connection = databases.create_cassandra_connection(
                     CASSANDRA_USERNAME,
                     CASSANDRA_PASSWORD,
                     CASSANDRA_HOST,
@@ -672,9 +625,38 @@ def lambda_handler(event, context):
                 logger.error(error)
                 raise Exception(error)
 
+    # Define a variable that stores information about aggregated data.
+    aggregated_data = get_aggregated_data(
+        postgresql_connection=postgresql_connection,
+        sql_arguments={
+            "chat_room_id": chat_room_id
+        }
+    )
+
+    # Return a message to the client that there is no data for the chat room.
+    if aggregated_data:
+        raise Exception("The data is not found in the database. Check the chat room id.")
+
+    # Define a variable that stores information about client data.
+    client_data = get_client_data(
+        postgresql_connection=postgresql_connection,
+        sql_arguments={
+            "client_id": client_id
+        }
+    )
+
+    # Return a message to the client that there is no data for the client.
+    if client_data:
+        raise Exception("The data is not found in the database. Check the client id.")
+
+    # Define a few necessary variables that will be used in the future.
+    operator_id = aggregated_data["operator_id"]
+    channel_id = aggregated_data["channel_id"]
+    organizations_ids = aggregated_data["organizations_ids"]
+
     # Define a variable that stores information about last message data of the completed chat room.
     last_message_data = get_last_message_data(
-        cassandra_connection=CASSANDRA_CONNECTION,
+        cassandra_connection=cassandra_connection,
         cql_arguments={
             "operator_id": operator_id,
             "channel_id": channel_id,
@@ -686,53 +668,50 @@ def lambda_handler(event, context):
     last_message_content = last_message_data.get("last_message_content", None)
     last_message_date_time = last_message_data.get("last_message_date_time", None)
 
-    # Run several functions in parallel to update all necessary data in different databases tables.
-    results_of_processes = execute_parallel_processes([
-        {
-            "function_object": create_non_accepted_chat_room,
-            "function_arguments": {
-                "cassandra_connection": CASSANDRA_CONNECTION,
-                "cql_arguments": {
-                    "organizations_ids": organizations_ids,
-                    "channel_id": channel_id,
-                    "chat_room_id": chat_room_id,
-                    "client_id": client_id,
-                    "last_message_content": last_message_content,
-                    "last_message_date_time": last_message_date_time
-                }
-            }
-        },
-        {
-            "function_object": update_chat_room_status,
-            "function_arguments": {
-                "postgresql_connection": POSTGRESQL_CONNECTION,
-                "sql_arguments": {
-                    "chat_room_id": chat_room_id
-                }
-            }
-        },
-        {
-            "function_object": delete_completed_chat_room,
-            "function_arguments": {
-                "cassandra_connection": CASSANDRA_CONNECTION,
-                "cql_arguments": {
-                    "operator_id": operator_id,
-                    "channel_id": channel_id,
-                    "chat_room_id": chat_room_id
-                }
-            }
-        },
-        {
-            "function_object": analyze_and_format_data,
-            "function_arguments": {
-                "aggregated_data": aggregated_data,
-                "client_data": client_data
-            }
+    # Run several related functions to update/delete all necessary data in different databases tables.
+    create_non_accepted_chat_room(
+        cassandra_connection=cassandra_connection,
+        cql_arguments={
+            "organizations_ids": organizations_ids,
+            "channel_id": channel_id,
+            "chat_room_id": chat_room_id,
+            "client_id": client_id,
+            "last_message_content": last_message_content,
+            "last_message_date_time": last_message_date_time
         }
-    ])
+    )
+    delete_completed_chat_room(
+        cassandra_connection=cassandra_connection,
+        cql_arguments={
+            "operator_id": operator_id,
+            "channel_id": channel_id,
+            "chat_room_id": chat_room_id
+        }
+    )
 
     # Define a variable that stores information about the status of the chat room.
-    chat_room_status = results_of_processes["chat_room_status"]
+    chat_room_status = update_chat_room_status(
+        postgresql_connection=postgresql_connection,
+        sql_arguments={
+            "chat_room_id": chat_room_id
+        }
+    )
+
+    # Run several functions in parallel to analyze and format all necessary data.
+    results_of_processes = execute_parallel_processes([
+        {
+            "function_object": analyze_and_format_aggregated_data,
+            "function_arguments": {
+                "aggregated_data": aggregated_data
+            }
+        },
+        {
+            "function_object": analyze_and_format_client_data,
+            "function_arguments": {
+                "client_data": client_data
+            }
+        },
+    ])
 
     # Define variables that store formatted information about the channel and client.
     channel = results_of_processes["channel"]
