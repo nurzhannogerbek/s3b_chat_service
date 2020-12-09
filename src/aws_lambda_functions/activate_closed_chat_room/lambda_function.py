@@ -65,40 +65,6 @@ def check_input_arguments(**kwargs) -> Dict[AnyStr, Any]:
     }
 
 
-def reuse_or_recreate_cassandra_connection():
-    global CASSANDRA_CONNECTION
-    if not CASSANDRA_CONNECTION:
-        try:
-            CASSANDRA_CONNECTION = databases.create_cassandra_connection(
-                CASSANDRA_USERNAME,
-                CASSANDRA_PASSWORD,
-                CASSANDRA_HOST,
-                CASSANDRA_PORT,
-                CASSANDRA_LOCAL_DC
-            )
-        except Exception as error:
-            logger.error(error)
-            raise Exception("Unable to connect to the Cassandra database.")
-    return CASSANDRA_CONNECTION
-
-
-def reuse_or_recreate_postgresql_connection():
-    global POSTGRESQL_CONNECTION
-    if not POSTGRESQL_CONNECTION:
-        try:
-            POSTGRESQL_CONNECTION = databases.create_postgresql_connection(
-                POSTGRESQL_USERNAME,
-                POSTGRESQL_PASSWORD,
-                POSTGRESQL_HOST,
-                POSTGRESQL_PORT,
-                POSTGRESQL_DB_NAME
-            )
-        except Exception as error:
-            logger.error(error)
-            raise Exception("Unable to connect to the PostgreSQL database.")
-    return POSTGRESQL_CONNECTION
-
-
 def execute_parallel_processes(functions: List[Dict[AnyStr, Union[Callable, Dict[AnyStr, Any]]]]) -> Dict[AnyStr, Any]:
     # Create an empty list to keep all parallel processes.
     processes = []
@@ -123,8 +89,6 @@ def execute_parallel_processes(functions: List[Dict[AnyStr, Union[Callable, Dict
         # Create a pipe for communication.
         parent_pipe, child_pipe = Pipe()
         pipes.append(parent_pipe)
-
-        # Add the child pipe the dictionary with arguments.
         kwargs["pipe"] = child_pipe
 
         # Create a process.
@@ -160,7 +124,6 @@ def psycopg2_cursor(function):
         result = function(cursor=cursor, **kwargs)
         cursor.close()
         return result
-
     return wrapper
 
 
@@ -618,16 +581,42 @@ def lambda_handler(event, context):
     chat_room_id = input_arguments["chat_room_id"]
     client_id = input_arguments["client_id"]
 
-    # Define the instances of the database connections.
-    postgresql_connection = reuse_or_recreate_postgresql_connection()
-    cassandra_connection = reuse_or_recreate_cassandra_connection()
+    # Reuse or recreate PostgreSQL connection.
+    global POSTGRESQL_CONNECTION
+    if not POSTGRESQL_CONNECTION:
+        try:
+            POSTGRESQL_CONNECTION = databases.create_postgresql_connection(
+                POSTGRESQL_USERNAME,
+                POSTGRESQL_PASSWORD,
+                POSTGRESQL_HOST,
+                POSTGRESQL_PORT,
+                POSTGRESQL_DB_NAME
+            )
+        except Exception as error:
+            logger.error(error)
+            raise Exception("Unable to connect to the PostgreSQL database.")
+
+    # Reuse or recreate Cassandra connection.
+    global CASSANDRA_CONNECTION
+    if not CASSANDRA_CONNECTION:
+        try:
+            CASSANDRA_CONNECTION = databases.create_cassandra_connection(
+                CASSANDRA_USERNAME,
+                CASSANDRA_PASSWORD,
+                CASSANDRA_HOST,
+                CASSANDRA_PORT,
+                CASSANDRA_LOCAL_DC
+            )
+        except Exception as error:
+            logger.error(error)
+            raise Exception("Unable to connect to the Cassandra database.")
 
     # Run several functions in parallel to get all necessary data from different databases tables.
     results_of_processes = execute_parallel_processes([
         {
             "function_object": get_aggregated_data,
             "function_arguments": {
-                "postgresql_connection": postgresql_connection,
+                "postgresql_connection": POSTGRESQL_CONNECTION,
                 "sql_arguments": {
                     "chat_room_id": chat_room_id
                 }
@@ -636,7 +625,7 @@ def lambda_handler(event, context):
         {
             "function_object": get_client_data,
             "function_arguments": {
-                "postgresql_connection": postgresql_connection,
+                "postgresql_connection": POSTGRESQL_CONNECTION,
                 "sql_arguments": {
                     "client_id": client_id
                 }
@@ -667,12 +656,12 @@ def lambda_handler(event, context):
     success = False
     while not success:
         try:
-            cassandra_connection.set_keyspace(CASSANDRA_KEYSPACE_NAME)
+            CASSANDRA_CONNECTION.set_keyspace(CASSANDRA_KEYSPACE_NAME)
             success = True
         except Exception as error:
             logger.warning(error)
             try:
-                cassandra_connection = databases.create_cassandra_connection(
+                CASSANDRA_CONNECTION = databases.create_cassandra_connection(
                     CASSANDRA_USERNAME,
                     CASSANDRA_PASSWORD,
                     CASSANDRA_HOST,
@@ -685,7 +674,7 @@ def lambda_handler(event, context):
 
     # Define a variable that stores information about last message data of the completed chat room.
     last_message_data = get_last_message_data(
-        cassandra_connection=cassandra_connection,
+        cassandra_connection=CASSANDRA_CONNECTION,
         cql_arguments={
             "operator_id": operator_id,
             "channel_id": channel_id,
@@ -702,7 +691,7 @@ def lambda_handler(event, context):
         {
             "function_object": create_non_accepted_chat_room,
             "function_arguments": {
-                "cassandra_connection": cassandra_connection,
+                "cassandra_connection": CASSANDRA_CONNECTION,
                 "cql_arguments": {
                     "organizations_ids": organizations_ids,
                     "channel_id": channel_id,
@@ -716,7 +705,7 @@ def lambda_handler(event, context):
         {
             "function_object": update_chat_room_status,
             "function_arguments": {
-                "postgresql_connection": postgresql_connection,
+                "postgresql_connection": POSTGRESQL_CONNECTION,
                 "sql_arguments": {
                     "chat_room_id": chat_room_id
                 }
@@ -725,7 +714,7 @@ def lambda_handler(event, context):
         {
             "function_object": delete_completed_chat_room,
             "function_arguments": {
-                "cassandra_connection": cassandra_connection,
+                "cassandra_connection": CASSANDRA_CONNECTION,
                 "cql_arguments": {
                     "operator_id": operator_id,
                     "channel_id": channel_id,
