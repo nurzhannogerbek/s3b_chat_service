@@ -12,31 +12,26 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.ERROR)
 
 # Initialize global variables with parameters for settings.
+POSTGRESQL_USERNAME = os.environ["POSTGRESQL_USERNAME"]
+POSTGRESQL_PASSWORD = os.environ["POSTGRESQL_PASSWORD"]
+POSTGRESQL_HOST = os.environ["POSTGRESQL_HOST"]
+POSTGRESQL_PORT = os.environ["POSTGRESQL_PORT"]
+POSTGRESQL_DB_NAME = os.environ["POSTGRESQL_DB_NAME"]
 CASSANDRA_USERNAME = os.environ["CASSANDRA_USERNAME"]
 CASSANDRA_PASSWORD = os.environ["CASSANDRA_PASSWORD"]
 CASSANDRA_HOST = os.environ["CASSANDRA_HOST"].split(",")
 CASSANDRA_PORT = os.environ["CASSANDRA_PORT"]
 CASSANDRA_LOCAL_DC = os.environ["CASSANDRA_LOCAL_DC"]
 CASSANDRA_KEYSPACE_NAME = os.environ["CASSANDRA_KEYSPACE_NAME"]
-POSTGRESQL_USERNAME = os.environ["POSTGRESQL_USERNAME"]
-POSTGRESQL_PASSWORD = os.environ["POSTGRESQL_PASSWORD"]
-POSTGRESQL_HOST = os.environ["POSTGRESQL_HOST"]
-POSTGRESQL_PORT = os.environ["POSTGRESQL_PORT"]
-POSTGRESQL_DB_NAME = os.environ["POSTGRESQL_DB_NAME"]
 
 # The connection to the database will be created the first time the AWS Lambda function is called.
 # Any subsequent call to the function will use the same database connection until the container stops.
-CASSANDRA_CONNECTION = None
 POSTGRESQL_CONNECTION = None
+CASSANDRA_CONNECTION = None
 
 
-def check_input_arguments(**kwargs) -> None:
+def check_input_arguments(**kwargs) -> Dict[AnyStr, Any]:
     # Check whether the required input arguments of the AWS Lambda function have keys in their dictionaries.
-    try:
-        pipe = kwargs["pipe"]
-    except KeyError as error:
-        logger.error(error)
-        raise Exception(error)
     try:
         event = kwargs["event"]
     except KeyError as error:
@@ -63,25 +58,14 @@ def check_input_arguments(**kwargs) -> None:
         logger.error(error)
         raise Exception(error)
 
-    # Send data to the pipe and then close it.
-    pipe.send({
-        "input_arguments": {
+    # Create the response structure and return it.
+    return {
             "chat_room_id": chat_room_id,
             "client_id": client_id
-        }
-    })
-    pipe.close()
+    }
 
 
-def reuse_or_recreate_cassandra_connection(**kwargs) -> None:
-    # Check whether the input arguments have keys in their dictionaries.
-    try:
-        pipe = kwargs["pipe"]
-    except KeyError as error:
-        logger.error(error)
-        raise Exception(error)
-
-    # Reuse or recreate Cassandra connection.
+def reuse_or_recreate_cassandra_connection():
     global CASSANDRA_CONNECTION
     if not CASSANDRA_CONNECTION:
         try:
@@ -95,23 +79,10 @@ def reuse_or_recreate_cassandra_connection(**kwargs) -> None:
         except Exception as error:
             logger.error(error)
             raise Exception("Unable to connect to the Cassandra database.")
-
-    # Send data to the pipe and then close it.
-    pipe.send({
-        "cassandra_connection": CASSANDRA_CONNECTION
-    })
-    pipe.close()
+    return CASSANDRA_CONNECTION
 
 
-def reuse_or_recreate_postgresql_connection(**kwargs) -> None:
-    # Check whether the input arguments have keys in their dictionaries.
-    try:
-        pipe = kwargs["pipe"]
-    except KeyError as error:
-        logger.error(error)
-        raise Exception(error)
-
-    # Reuse or recreate PostgreSQL connection.
+def reuse_or_recreate_postgresql_connection():
     global POSTGRESQL_CONNECTION
     if not POSTGRESQL_CONNECTION:
         try:
@@ -125,12 +96,7 @@ def reuse_or_recreate_postgresql_connection(**kwargs) -> None:
         except Exception as error:
             logger.error(error)
             raise Exception("Unable to connect to the PostgreSQL database.")
-
-    # Send data to the pipe and then close it.
-    pipe.send({
-        "postgresql_connection": POSTGRESQL_CONNECTION
-    })
-    pipe.close()
+    return POSTGRESQL_CONNECTION
 
 
 def execute_parallel_processes(functions: List[Dict[AnyStr, Union[Callable, Dict[AnyStr, Any]]]]) -> Dict[AnyStr, Any]:
@@ -647,32 +613,14 @@ def lambda_handler(event, context):
     :param event: The AWS Lambda function uses this parameter to pass in event data to the handler.
     :param context: The AWS Lambda function uses this parameter to provide runtime information to your handler.
     """
-    # Run several functions related to initialization processes in parallel.
-    results_of_processes = execute_parallel_processes([
-        {
-            "function_object": check_input_arguments,
-            "function_arguments": {
-                "event": event
-            }
-        },
-        {
-            "function_object": reuse_or_recreate_cassandra_connection,
-            "function_arguments": {}
-        },
-        {
-            "function_object": reuse_or_recreate_postgresql_connection,
-            "function_arguments": {}
-        }
-    ])
-
-    # Define the instances of the database connections.
-    cassandra_connection = results_of_processes["cassandra_connection"]
-    postgresql_connection = results_of_processes["postgresql_connection"]
-
     # Define the input arguments of the AWS Lambda function.
-    input_arguments = results_of_processes["input_arguments"]
+    input_arguments = check_input_arguments(event=event)
     chat_room_id = input_arguments["chat_room_id"]
     client_id = input_arguments["client_id"]
+
+    # Define the instances of the database connections.
+    postgresql_connection = reuse_or_recreate_postgresql_connection()
+    cassandra_connection = reuse_or_recreate_cassandra_connection()
 
     # Run several functions in parallel to get all necessary data from different databases tables.
     results_of_processes = execute_parallel_processes([
