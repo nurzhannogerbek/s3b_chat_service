@@ -450,6 +450,42 @@ def create_non_accepted_chat_room(**kwargs) -> None:
     return None
 
 
+def delete_completed_chat_room(**kwargs) -> None:
+    # Check whether the input arguments have keys in their dictionaries.
+    try:
+        cassandra_connection = kwargs["cassandra_connection"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        arguments = kwargs["cql_arguments"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+
+    # Prepare an CQL query that deletes the completed chat room information.
+    statement = """
+    delete from
+        completed_chat_rooms
+    where
+        operator_id = %(operator_id)s
+    and
+        channel_id = %(channel_id)s
+    and
+        chat_room_id = %(chat_room_id)s;
+    """
+
+    # Execute the CQL query dynamically, in a convenient and safe way.
+    try:
+        cassandra_connection.execute(statement, arguments)
+    except Exception as error:
+        logger.error(error)
+        raise Exception(error)
+
+    # Return nothing.
+    return None
+
+
 @psycopg2_cursor
 def update_chat_room_status(**kwargs) -> Dict[AnyStr, Any]:
     # Check whether the input arguments have keys in their dictionaries.
@@ -487,42 +523,6 @@ def update_chat_room_status(**kwargs) -> Dict[AnyStr, Any]:
     return {
         "chat_room_status": cursor.fetchone()["chat_room_status"]
     }
-
-
-def delete_completed_chat_room(**kwargs) -> None:
-    # Check whether the input arguments have keys in their dictionaries.
-    try:
-        cassandra_connection = kwargs["cassandra_connection"]
-    except KeyError as error:
-        logger.error(error)
-        raise Exception(error)
-    try:
-        arguments = kwargs["cql_arguments"]
-    except KeyError as error:
-        logger.error(error)
-        raise Exception(error)
-
-    # Prepare an CQL query that deletes the completed chat room information.
-    statement = """
-    delete from
-        completed_chat_rooms
-    where
-        operator_id = %(operator_id)s
-    and
-        channel_id = %(channel_id)s
-    and
-        chat_room_id = %(chat_room_id)s;
-    """
-
-    # Execute the CQL query dynamically, in a convenient and safe way.
-    try:
-        cassandra_connection.execute(statement, arguments)
-    except Exception as error:
-        logger.error(error)
-        raise Exception(error)
-
-    # Return nothing.
-    return None
 
 
 def analyze_and_format_aggregated_data(**kwargs) -> None:
@@ -631,7 +631,7 @@ def lambda_handler(event, context):
         sql_arguments={
             "chat_room_id": chat_room_id
         }
-    )
+    )["aggregated_data"]
 
     # Return a message to the client that there is no data for the chat room.
     if aggregated_data:
@@ -643,7 +643,7 @@ def lambda_handler(event, context):
         sql_arguments={
             "client_id": client_id
         }
-    )
+    )["client_data"]
 
     # Return a message to the client that there is no data for the client.
     if client_data:
@@ -662,7 +662,7 @@ def lambda_handler(event, context):
             "channel_id": channel_id,
             "chat_room_id": chat_room_id
         }
-    )
+    )["last_message_data"]
 
     # Define a few necessary variables that will be used in the future.
     last_message_content = last_message_data.get("last_message_content", None)
@@ -695,7 +695,7 @@ def lambda_handler(event, context):
         sql_arguments={
             "chat_room_id": chat_room_id
         }
-    )
+    )["chat_room_status"]
 
     # Run several functions in parallel to analyze and format all necessary data.
     results_of_processes = execute_parallel_processes([
