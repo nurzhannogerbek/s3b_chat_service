@@ -184,6 +184,11 @@ def get_aggregated_data(**kwargs) -> Dict[AnyStr, Any]:
     except KeyError as error:
         logger.error(error)
         raise Exception(error)
+    try:
+        pipe = kwargs["pipe"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
 
     # Prepare an sql query that returns aggregated data about a completed chat room.
     statement = """
@@ -236,10 +241,11 @@ def get_aggregated_data(**kwargs) -> Dict[AnyStr, Any]:
         logger.error(error)
         raise Exception(error)
 
-    # Create the response structure and return it.
-    return {
+    # Send data to the pipe and then close it.
+    pipe.send({
         "aggregated_data": cursor.fetchone()
-    }
+    })
+    pipe.close()
 
 
 @psycopg2_cursor
@@ -252,6 +258,11 @@ def get_client_data(**kwargs) -> Dict[AnyStr, Any]:
         raise Exception(error)
     try:
         arguments = kwargs["sql_arguments"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        pipe = kwargs["pipe"]
     except KeyError as error:
         logger.error(error)
         raise Exception(error)
@@ -357,10 +368,11 @@ def get_client_data(**kwargs) -> Dict[AnyStr, Any]:
         logger.error(error)
         raise Exception(error)
 
-    # Create the response structure and return it.
-    return {
+    # Send data to the pipe and then close it.
+    pipe.send({
         "client_data": cursor.fetchone()
-    }
+    })
+    pipe.close()
 
 
 def get_last_message_data(**kwargs) -> Dict[AnyStr, Any]:
