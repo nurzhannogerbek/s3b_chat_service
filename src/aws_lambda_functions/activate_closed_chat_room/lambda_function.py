@@ -130,6 +130,7 @@ def create_cassandra_connection() -> Session:
             CASSANDRA_PORT,
             CASSANDRA_LOCAL_DC
         )
+        cassandra_connection.set_keyspace(CASSANDRA_KEYSPACE_NAME)
     except Exception as error:
         logger.error(error)
         raise Exception("Unable to connect to the Cassandra database.")
