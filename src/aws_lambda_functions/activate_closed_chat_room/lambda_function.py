@@ -6,8 +6,9 @@ from psycopg2.extensions import connection
 from cassandra.cluster import Session
 from functools import wraps
 from typing import *
-import re
 import uuid
+import asyncio
+from functools import partial
 import databases
 import utils
 
@@ -27,6 +28,11 @@ CASSANDRA_HOST = os.environ["CASSANDRA_HOST"].split(",")
 CASSANDRA_PORT = os.environ["CASSANDRA_PORT"]
 CASSANDRA_LOCAL_DC = os.environ["CASSANDRA_LOCAL_DC"]
 CASSANDRA_KEYSPACE_NAME = os.environ["CASSANDRA_KEYSPACE_NAME"]
+
+# The connection to the database will be created the first time the AWS Lambda function is called.
+# Any subsequent call to the function will use the same database connection until the container stops.
+POSTGRESQL_CONNECTION = None
+CASSANDRA_CONNECTION = None
 
 
 def execute_parallel_processes(functions: List[Dict[AnyStr, Union[Callable, Dict[AnyStr, Any]]]]) -> Dict[AnyStr, Any]:
@@ -93,7 +99,7 @@ def check_input_arguments(event: Dict[AnyStr, Any]) -> Dict[AnyStr, Any]:
             raise Exception("The '%s' argument doesn't exist.".format(utils.camel_case(argument_name)))
         if argument_value is None:
             raise Exception("The '%s' argument can't be None/Null/Undefined.".format(utils.camel_case(argument_name)))
-        if re.search("Id$", argument_name):
+        if argument_name.endswith("Id"):
             try:
                 uuid.UUID(argument_value)
             except ValueError:
@@ -106,63 +112,79 @@ def check_input_arguments(event: Dict[AnyStr, Any]) -> Dict[AnyStr, Any]:
     }
 
 
-def create_postgresql_connection() -> connection:
-    try:
-        postgresql_connection = databases.create_postgresql_connection(
-            POSTGRESQL_USERNAME,
-            POSTGRESQL_PASSWORD,
-            POSTGRESQL_HOST,
-            POSTGRESQL_PORT,
-            POSTGRESQL_DB_NAME
-        )
-    except Exception as error:
-        logger.error(error)
-        raise Exception("Unable to connect to the PostgreSQL database.")
-    return postgresql_connection
+def reuse_or_recreate_postgresql_connection() -> connection:
+    global POSTGRESQL_CONNECTION
+    if not POSTGRESQL_CONNECTION:
+        try:
+            POSTGRESQL_CONNECTION = databases.create_postgresql_connection(
+                POSTGRESQL_USERNAME,
+                POSTGRESQL_PASSWORD,
+                POSTGRESQL_HOST,
+                POSTGRESQL_PORT,
+                POSTGRESQL_DB_NAME
+            )
+        except Exception as error:
+            logger.error(error)
+            raise Exception("Unable to connect to the PostgreSQL database.")
+    return POSTGRESQL_CONNECTION
 
 
-def create_cassandra_connection() -> Session:
-    try:
-        cassandra_connection = databases.create_cassandra_connection(
-            CASSANDRA_USERNAME,
-            CASSANDRA_PASSWORD,
-            CASSANDRA_HOST,
-            CASSANDRA_PORT,
-            CASSANDRA_LOCAL_DC
-        )
-        cassandra_connection.set_keyspace(CASSANDRA_KEYSPACE_NAME)
-    except Exception as error:
-        logger.error(error)
-        raise Exception("Unable to connect to the Cassandra database.")
-    return cassandra_connection
+def reuse_or_recreate_cassandra_connection() -> Session:
+    global CASSANDRA_CONNECTION
+    if not CASSANDRA_CONNECTION:
+        try:
+            CASSANDRA_CONNECTION = databases.create_cassandra_connection(
+                CASSANDRA_USERNAME,
+                CASSANDRA_PASSWORD,
+                CASSANDRA_HOST,
+                CASSANDRA_PORT,
+                CASSANDRA_LOCAL_DC
+            )
+        except Exception as error:
+            logger.error(error)
+            raise Exception("Unable to connect to the Cassandra database.")
+    return CASSANDRA_CONNECTION
+
+
+def set_cassandra_keyspace(cassandra_connection: Session) -> None:
+    # This peace of code fix ERROR NoHostAvailable: ("Unable to complete the operation against any hosts").
+    successful_operation = False
+    while not successful_operation:
+        try:
+            cassandra_connection.set_keyspace(CASSANDRA_KEYSPACE_NAME)
+            successful_operation = True
+        except Exception as warning:
+            logger.warning(warning)
+            try:
+                cassandra_connection = databases.create_cassandra_connection(
+                    CASSANDRA_USERNAME,
+                    CASSANDRA_PASSWORD,
+                    CASSANDRA_HOST,
+                    CASSANDRA_PORT,
+                    CASSANDRA_LOCAL_DC
+                )
+            except Exception as error:
+                logger.error(error)
+                raise Exception(error)
 
 
 def postgresql_wrapper(function):
     @wraps(function)
     def wrapper(**kwargs):
-        postgresql_connection = create_postgresql_connection()
+        try:
+            postgresql_connection = kwargs["postgresql_connection"]
+        except KeyError as error:
+            logger.error(error)
+            raise Exception(error)
         cursor = postgresql_connection.cursor(cursor_factory=RealDictCursor)
         kwargs["cursor"] = cursor
         result = function(**kwargs)
-        cursor.close()
-        postgresql_connection.close()
-        return result
-    return wrapper
-
-
-def cassandra_wrapper(function):
-    @wraps(function)
-    def wrapper(**kwargs):
-        cassandra_connection = create_cassandra_connection()
-        kwargs["cassandra_connection"] = cassandra_connection
-        result = function(**kwargs)
-        cassandra_connection.shutdown()
         return result
     return wrapper
 
 
 @postgresql_wrapper
-def get_aggregated_data(**kwargs) -> None:
+def get_aggregated_data(**kwargs) -> Dict[AnyStr, Any]:
     # Check if the input dictionary has all the necessary keys.
     try:
         cursor = kwargs["cursor"]
@@ -171,11 +193,6 @@ def get_aggregated_data(**kwargs) -> None:
         raise Exception(error)
     try:
         sql_arguments = kwargs["sql_arguments"]
-    except KeyError as error:
-        logger.error(error)
-        raise Exception(error)
-    try:
-        pipe = kwargs["pipe"]
     except KeyError as error:
         logger.error(error)
         raise Exception(error)
@@ -231,13 +248,12 @@ def get_aggregated_data(**kwargs) -> None:
         logger.error(error)
         raise Exception(error)
 
-    # Send data to the pipe and then close it.
-    pipe.send({"aggregated_data": cursor.fetchone()})
-    pipe.close()
+    # Create the response structure and return it.
+    return cursor.fetchone()
 
 
 @postgresql_wrapper
-def get_client_data(**kwargs) -> None:
+def get_client_data(**kwargs) -> Dict[AnyStr, Any]:
     # Check if the input dictionary has all the necessary keys.
     try:
         cursor = kwargs["cursor"]
@@ -246,11 +262,6 @@ def get_client_data(**kwargs) -> None:
         raise Exception(error)
     try:
         sql_arguments = kwargs["sql_arguments"]
-    except KeyError as error:
-        logger.error(error)
-        raise Exception(error)
-    try:
-        pipe = kwargs["pipe"]
     except KeyError as error:
         logger.error(error)
         raise Exception(error)
@@ -356,12 +367,10 @@ def get_client_data(**kwargs) -> None:
         logger.error(error)
         raise Exception(error)
 
-    # Send data to the pipe and then close it.
-    pipe.send({"client_data": cursor.fetchone()})
-    pipe.close()
+    # Create the response structure and return it.
+    return cursor.fetchone()
 
 
-@cassandra_wrapper
 def get_last_message_data(**kwargs) -> Dict[AnyStr, Any]:
     # Check if the input dictionary has all the necessary keys.
     try:
@@ -402,7 +411,18 @@ def get_last_message_data(**kwargs) -> Dict[AnyStr, Any]:
     return last_message_data
 
 
-@cassandra_wrapper
+def fire_and_forget_wrapper(function):
+    @wraps(function)
+    def wrapper(*args, **kwargs):
+        loop = asyncio.get_event_loop()
+        if callable(function):
+            return loop.run_in_executor(None, partial(function, *args, **kwargs))
+        else:
+            raise Exception("The '%s' function must be a callable.".format(function.__name__))
+    return wrapper
+
+
+@fire_and_forget_wrapper
 def create_non_accepted_chat_room(**kwargs) -> None:
     # Check if the input dictionary has all the necessary keys.
     try:
@@ -417,11 +437,6 @@ def create_non_accepted_chat_room(**kwargs) -> None:
         raise Exception(error)
     try:
         organizations_ids = cql_arguments["organizations_ids"]
-    except KeyError as error:
-        logger.error(error)
-        raise Exception(error)
-    try:
-        pipe = kwargs["pipe"]
     except KeyError as error:
         logger.error(error)
         raise Exception(error)
@@ -457,12 +472,8 @@ def create_non_accepted_chat_room(**kwargs) -> None:
             logger.error(error)
             raise Exception(error)
 
-    # Send data to the pipe and then close it.
-    pipe.send({})
-    pipe.close()
 
-
-@cassandra_wrapper
+@fire_and_forget_wrapper
 def delete_completed_chat_room(**kwargs) -> None:
     # Check if the input dictionary has all the necessary keys.
     try:
@@ -472,11 +483,6 @@ def delete_completed_chat_room(**kwargs) -> None:
         raise Exception(error)
     try:
         cql_arguments = kwargs["cql_arguments"]
-    except KeyError as error:
-        logger.error(error)
-        raise Exception(error)
-    try:
-        pipe = kwargs["pipe"]
     except KeyError as error:
         logger.error(error)
         raise Exception(error)
@@ -500,13 +506,9 @@ def delete_completed_chat_room(**kwargs) -> None:
         logger.error(error)
         raise Exception(error)
 
-    # Send data to the pipe and then close it.
-    pipe.send({})
-    pipe.close()
-
 
 @postgresql_wrapper
-def update_chat_room_status(**kwargs) -> None:
+def update_chat_room_status(**kwargs) -> Dict[AnyStr, Any]:
     # Check if the input dictionary has all the necessary keys.
     try:
         cursor = kwargs["cursor"]
@@ -515,11 +517,6 @@ def update_chat_room_status(**kwargs) -> None:
         raise Exception(error)
     try:
         sql_arguments = kwargs["sql_arguments"]
-    except KeyError as error:
-        logger.error(error)
-        raise Exception(error)
-    try:
-        pipe = kwargs["pipe"]
     except KeyError as error:
         logger.error(error)
         raise Exception(error)
@@ -543,9 +540,8 @@ def update_chat_room_status(**kwargs) -> None:
         logger.error(error)
         raise Exception(error)
 
-    # Send data to the pipe and then close it.
-    pipe.send({"chat_room_status": cursor.fetchone()["chat_room_status"]})
-    pipe.close()
+    # Create the response structure and return it.
+    return cursor.fetchone()["chat_room_status"]
 
 
 def analyze_and_format_aggregated_data(**kwargs) -> None:
@@ -616,42 +612,37 @@ def lambda_handler(event, context):
     :param event: The AWS Lambda function uses this parameter to pass in event data to the handler.
     :param context: The AWS Lambda function uses this parameter to provide runtime information to your handler.
     """
-    # First check and then define the input arguments of the AWS Lambda function.
+    # Define the input arguments of the AWS Lambda function.
     input_arguments = check_input_arguments(event=event)
     chat_room_id = input_arguments["chat_room_id"]
     client_id = input_arguments["client_id"]
 
-    # Run several functions in parallel processes to get all the necessary data from different database tables.
-    results_of_processes = execute_parallel_processes([
-        {
-            "function_object": get_aggregated_data,
-            "function_arguments": {
-                "sql_arguments": {
-                    "chat_room_id": chat_room_id
-                }
-            }
-        },
-        {
-            "function_object": get_client_data,
-            "function_arguments": {
-                "sql_arguments": {
-                    "client_id": client_id
-                }
-            }
+    # Define the instances of the database connections.
+    postgresql_connection = reuse_or_recreate_postgresql_connection()
+    cassandra_connection = reuse_or_recreate_cassandra_connection()
+    set_cassandra_keyspace(cassandra_connection=cassandra_connection)
+
+    # Define a variable that stores information about aggregated data.
+    aggregated_data = get_aggregated_data(
+        postgresql_connection=postgresql_connection,
+        sql_arguments={
+            "chat_room_id": chat_room_id
         }
-    ])
+    )
 
-    # Define the variable that stores information about aggregated data.
-    aggregated_data = results_of_processes["aggregated_data"]
-
-    # Return the message to the client that there is no data for the chat room.
+    # Return a message to the client that there is no data for the chat room.
     if not aggregated_data:
         raise Exception("The chat room data was not found in the database.")
 
-    # Define the variable that stores information about client data.
-    client_data = results_of_processes["client_data"]
+    # Define a variable that stores information about client data.
+    client_data = get_client_data(
+        postgresql_connection=postgresql_connection,
+        sql_arguments={
+            "client_id": client_id
+        }
+    )
 
-    # Return the message to the client that there is no data for the client.
+    # Return a message to the client that there is no data for the client.
     if not client_data:
         raise Exception("The client data was not found in the database.")
 
@@ -660,8 +651,9 @@ def lambda_handler(event, context):
     channel_id = aggregated_data["channel_id"]
     organizations_ids = aggregated_data["organizations_ids"]
 
-    # Define the variable that stores information about last message data of the completed chat room.
+    # Define a variable that stores information about last message data of the completed chat room.
     last_message_data = get_last_message_data(
+        cassandra_connection=cassandra_connection,
         cql_arguments={
             "operator_id": uuid.UUID(operator_id),
             "channel_id": uuid.UUID(channel_id),
@@ -674,44 +666,35 @@ def lambda_handler(event, context):
     last_message_date_time = last_message_data.get("last_message_date_time", None)
 
     # Run several related functions to update/delete all necessary data in different databases tables.
-    results_of_processes = execute_parallel_processes([
-        {
-            "function_object": create_non_accepted_chat_room,
-            "function_arguments": {
-                "cql_arguments": {
-                    "organizations_ids": organizations_ids,
-                    "channel_id": uuid.UUID(channel_id),
-                    "chat_room_id": uuid.UUID(chat_room_id),
-                    "client_id": uuid.UUID(client_id),
-                    "last_message_content": last_message_content,
-                    "last_message_date_time": last_message_date_time
-                }
-            }
-        },
-        {
-            "function_object": delete_completed_chat_room,
-            "function_arguments": {
-                "cql_arguments": {
-                    "operator_id": uuid.UUID(operator_id),
-                    "channel_id": uuid.UUID(channel_id),
-                    "chat_room_id": uuid.UUID(chat_room_id)
-                }
-            }
-        },
-        {
-            "function_object": update_chat_room_status,
-            "function_arguments": {
-                "sql_arguments": {
-                    "chat_room_id": chat_room_id
-                }
-            }
+    create_non_accepted_chat_room(
+        cassandra_connection=cassandra_connection,
+        cql_arguments={
+            "organizations_ids": organizations_ids,
+            "channel_id": uuid.UUID(channel_id),
+            "chat_room_id": uuid.UUID(chat_room_id),
+            "client_id": uuid.UUID(client_id),
+            "last_message_content": last_message_content,
+            "last_message_date_time": last_message_date_time
         }
-    ])
+    )
+    delete_completed_chat_room(
+        cassandra_connection=cassandra_connection,
+        cql_arguments={
+            "operator_id": uuid.UUID(operator_id),
+            "channel_id": uuid.UUID(channel_id),
+            "chat_room_id": uuid.UUID(chat_room_id)
+        }
+    )
 
     # Define a variable that stores information about the status of the chat room.
-    chat_room_status = results_of_processes["chat_room_status"]
+    chat_room_status = update_chat_room_status(
+        postgresql_connection=postgresql_connection,
+        sql_arguments={
+            "chat_room_id": chat_room_id
+        }
+    )
 
-    # Run several functions in parallel processes to analyze and format all necessary data.
+    # Run several functions in parallel to analyze and format all necessary data.
     results_of_processes = execute_parallel_processes([
         {
             "function_object": analyze_and_format_aggregated_data,
@@ -724,10 +707,10 @@ def lambda_handler(event, context):
             "function_arguments": {
                 "client_data": client_data
             }
-        }
+        },
     ])
 
-    # Define variables that store formatted information about the channel and the client.
+    # Define variables that store formatted information about the channel and client.
     channel = results_of_processes["channel"]
     client = results_of_processes["client"]
 
