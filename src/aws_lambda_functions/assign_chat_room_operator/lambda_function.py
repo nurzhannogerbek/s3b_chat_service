@@ -1,5 +1,6 @@
 import logging
 import os
+from cassandra.query import BatchStatement, SimpleStatement
 from psycopg2.extras import RealDictCursor
 from psycopg2.extensions import connection
 from cassandra.cluster import Session
@@ -135,6 +136,7 @@ def postgresql_wrapper(function):
         result = function(**kwargs)
         cursor.close()
         return result
+
     return wrapper
 
 
@@ -227,6 +229,7 @@ def fire_and_forget_wrapper(function):
             return loop.run_in_executor(None, partial(function, *args, **kwargs))
         else:
             raise Exception("The '%s' function must be a callable.".format(function.__name__))
+
     return wrapper
 
 
@@ -274,7 +277,6 @@ def create_accepted_chat_room(**kwargs) -> None:
     return None
 
 
-@fire_and_forget_wrapper
 def delete_non_accepted_chat_room(**kwargs) -> None:
     # Check if the input dictionary has all the necessary keys.
     try:
@@ -305,17 +307,20 @@ def delete_non_accepted_chat_room(**kwargs) -> None:
         chat_room_id = %(chat_room_id)s;
     """
 
+    # Create the instance of the "BatchStatement" to delete bulk data in Cassandra by one query.
+    batch = BatchStatement()
+
     # For each organization that can serve the chat room, we delete an entry in the database.
     for organization_id in organizations_ids:
-        # Add or update the value of the argument.
         cql_arguments["organization_id"] = uuid.UUID(organization_id)
+        batch.add(SimpleStatement(cql_statement, cql_arguments))
 
-        # Execute the CQL query dynamically, in a convenient and safe way.
-        try:
-            cassandra_connection.execute(cql_statement, cql_arguments)
-        except Exception as error:
-            logger.error(error)
-            raise Exception(error)
+    # Execute the CQL query dynamically, in a convenient and safe way.
+    try:
+        cassandra_connection.execute(batch)
+    except Exception as error:
+        logger.error(error)
+        raise Exception(error)
 
     # Return nothing.
     return None

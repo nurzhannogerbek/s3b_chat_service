@@ -1,5 +1,6 @@
 import logging
 import os
+from cassandra.query import BatchStatement, SimpleStatement
 from multiprocessing import Process, Pipe
 from psycopg2.extras import RealDictCursor
 from psycopg2.extensions import connection
@@ -426,7 +427,6 @@ def fire_and_forget_wrapper(function):
     return wrapper
 
 
-@fire_and_forget_wrapper
 def create_non_accepted_chat_room(**kwargs) -> None:
     # Check if the input dictionary has all the necessary keys.
     try:
@@ -464,17 +464,21 @@ def create_non_accepted_chat_room(**kwargs) -> None:
     );
     """
 
+    # Create the instance of the "BatchStatement" to insert bulk data into Cassandra by one query.
+    batch = BatchStatement()
+
     # For each organization that can serve the chat room, we create an entry in the database.
     for organization_id in organizations_ids:
         # Add or update the value of the argument.
         cql_arguments["organization_id"] = uuid.UUID(organization_id)
+        batch.add(SimpleStatement(cql_statement, cql_arguments))
 
-        # Execute the CQL query dynamically, in a convenient and safe way.
-        try:
-            cassandra_connection.execute(cql_statement, cql_arguments)
-        except Exception as error:
-            logger.error(error)
-            raise Exception(error)
+    # Execute the CQL query dynamically, in a convenient and safe way.
+    try:
+        cassandra_connection.execute(batch)
+    except Exception as error:
+        logger.error(error)
+        raise Exception(error)
 
     # Return nothing.
     return None
