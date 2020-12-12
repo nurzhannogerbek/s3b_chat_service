@@ -447,7 +447,7 @@ def create_non_accepted_chat_room(**kwargs) -> None:
         raise Exception(error)
 
     # Prepare the CQL query that creates a non accepted chat room.
-    cql_statement = """
+    cql_statement = cassandra_connection.prepare("""
     insert into non_accepted_chat_rooms (
         organization_id,
         channel_id,
@@ -463,7 +463,7 @@ def create_non_accepted_chat_room(**kwargs) -> None:
         %(last_message_content)s,
         %(last_message_date_time)s
     );
-    """
+    """)
 
     # Create the instance of the "BatchStatement" to insert bulk data into Cassandra by one query.
     batch = BatchStatement(retry_policy=RetryPolicy)
@@ -472,7 +472,7 @@ def create_non_accepted_chat_room(**kwargs) -> None:
     for organization_id in organizations_ids:
         # Add or update the value of the argument.
         cql_arguments["organization_id"] = uuid.UUID(organization_id)
-        batch.add(SimpleStatement(cql_statement, cql_arguments))
+        batch.add(cql_statement, cql_arguments)
 
     # Execute the CQL query dynamically, in a convenient and safe way.
     try:

@@ -314,7 +314,7 @@ def delete_non_accepted_chat_room(**kwargs) -> None:
     # For each organization that can serve the chat room, we delete an entry in the database.
     for organization_id in organizations_ids:
         cql_arguments["organization_id"] = uuid.UUID(organization_id)
-        batch.add(SimpleStatement(cql_statement, cql_arguments))
+        batch.add(cql_statement, cql_arguments)
 
     # Execute the CQL query dynamically, in a convenient and safe way.
     try:
