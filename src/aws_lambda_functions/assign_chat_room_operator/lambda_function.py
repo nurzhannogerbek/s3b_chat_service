@@ -9,6 +9,7 @@ from typing import *
 import uuid
 import asyncio
 from functools import partial
+from cassandra.policies import RetryPolicy
 import databases
 import utils
 
@@ -308,7 +309,7 @@ def delete_non_accepted_chat_room(**kwargs) -> None:
     """
 
     # Create the instance of the "BatchStatement" to delete bulk data in Cassandra by one query.
-    batch = BatchStatement()
+    batch = BatchStatement(retry_policy=RetryPolicy)
 
     # For each organization that can serve the chat room, we delete an entry in the database.
     for organization_id in organizations_ids:
