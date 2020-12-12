@@ -295,7 +295,7 @@ def delete_non_accepted_chat_room(**kwargs) -> None:
         raise Exception(error)
 
     # Prepare the CQL query that deletes a non accepted chat room.
-    cql_statement = cassandra_connection.prepare("""
+    cql_statement = """
     delete from
         non_accepted_chat_rooms
     where
@@ -304,7 +304,7 @@ def delete_non_accepted_chat_room(**kwargs) -> None:
         channel_id = %(channel_id)s
     and
         chat_room_id = %(chat_room_id)s;
-    """)
+    """
 
     # For each organization that can serve the chat room, we delete an entry in the database.
     for organization_id in organizations_ids:
