@@ -197,7 +197,7 @@ def get_last_message_data(**kwargs) -> Dict[AnyStr, Any]:
     from
         non_accepted_chat_rooms
     where
-        operator_id = %(operator_id)s
+        organization_id = %(organization_id)s
     and
         channel_id = %(channel_id)s
     and
@@ -530,7 +530,7 @@ def lambda_handler(event, context):
     last_message_data = get_last_message_data(
         cassandra_connection=cassandra_connection,
         cql_arguments={
-            "operator_id": uuid.UUID(operator_id),
+            "organization_id": uuid.UUID(organizations_ids[0]),
             "channel_id": uuid.UUID(channel_id),
             "chat_room_id": uuid.UUID(chat_room_id)
         }
