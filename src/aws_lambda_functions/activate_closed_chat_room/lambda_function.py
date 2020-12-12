@@ -179,6 +179,7 @@ def postgresql_wrapper(function):
         cursor = postgresql_connection.cursor(cursor_factory=RealDictCursor)
         kwargs["cursor"] = cursor
         result = function(**kwargs)
+        cursor.close()
         return result
     return wrapper
 
@@ -612,7 +613,7 @@ def lambda_handler(event, context):
     :param event: The AWS Lambda function uses this parameter to pass in event data to the handler.
     :param context: The AWS Lambda function uses this parameter to provide runtime information to your handler.
     """
-    # Define the input arguments of the AWS Lambda function.
+    # First check and then define the input arguments of the AWS Lambda function.
     input_arguments = check_input_arguments(event=event)
     chat_room_id = input_arguments["chat_room_id"]
     client_id = input_arguments["client_id"]
@@ -622,7 +623,7 @@ def lambda_handler(event, context):
     cassandra_connection = reuse_or_recreate_cassandra_connection()
     set_cassandra_keyspace(cassandra_connection=cassandra_connection)
 
-    # Define a variable that stores information about aggregated data.
+    # Define the variable that stores information about aggregated data.
     aggregated_data = get_aggregated_data(
         postgresql_connection=postgresql_connection,
         sql_arguments={
@@ -630,11 +631,11 @@ def lambda_handler(event, context):
         }
     )
 
-    # Return a message to the client that there is no data for the chat room.
+    # Return the message to the client that there is no data for the chat room.
     if not aggregated_data:
         raise Exception("The chat room data was not found in the database.")
 
-    # Define a variable that stores information about client data.
+    # Define the variable that stores information about client data.
     client_data = get_client_data(
         postgresql_connection=postgresql_connection,
         sql_arguments={
@@ -642,7 +643,7 @@ def lambda_handler(event, context):
         }
     )
 
-    # Return a message to the client that there is no data for the client.
+    # Return the message to the client that there is no data for the client.
     if not client_data:
         raise Exception("The client data was not found in the database.")
 
@@ -651,7 +652,7 @@ def lambda_handler(event, context):
     channel_id = aggregated_data["channel_id"]
     organizations_ids = aggregated_data["organizations_ids"]
 
-    # Define a variable that stores information about last message data of the completed chat room.
+    # Define the variable that stores information about last message data of the completed chat room.
     last_message_data = get_last_message_data(
         cassandra_connection=cassandra_connection,
         cql_arguments={
@@ -665,7 +666,7 @@ def lambda_handler(event, context):
     last_message_content = last_message_data.get("last_message_content", None)
     last_message_date_time = last_message_data.get("last_message_date_time", None)
 
-    # Run several related functions to update/delete all necessary data in different databases tables.
+    # Run several related functions to create/delete all necessary data in different databases tables.
     create_non_accepted_chat_room(
         cassandra_connection=cassandra_connection,
         cql_arguments={
@@ -686,7 +687,7 @@ def lambda_handler(event, context):
         }
     )
 
-    # Define a variable that stores information about the status of the chat room.
+    # Define the variable that stores information about the status of the chat room.
     chat_room_status = update_chat_room_status(
         postgresql_connection=postgresql_connection,
         sql_arguments={
