@@ -297,7 +297,7 @@ def delete_non_accepted_chat_room(**kwargs) -> None:
         raise Exception(error)
 
     # Prepare the CQL query that deletes a non accepted chat room.
-    cql_statement = """
+    cql_statement = cassandra_connection.prepare("""
     delete from
         non_accepted_chat_rooms
     where
@@ -306,7 +306,7 @@ def delete_non_accepted_chat_room(**kwargs) -> None:
         channel_id = %(channel_id)s
     and
         chat_room_id = %(chat_room_id)s;
-    """
+    """)
 
     # Create the instance of the "BatchStatement" to delete bulk data in Cassandra by one query.
     batch = BatchStatement(retry_policy=RetryPolicy)
