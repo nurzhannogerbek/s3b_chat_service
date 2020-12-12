@@ -371,7 +371,7 @@ def set_responsible_operator(**kwargs) -> None:
         user_id
     ) values (
         %(chat_room_id)s,
-        %(user_id)s
+        %(operator_id)s
     );
     """
 
