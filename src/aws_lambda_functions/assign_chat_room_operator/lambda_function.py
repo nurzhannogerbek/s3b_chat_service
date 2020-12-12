@@ -1,5 +1,6 @@
 import logging
 import os
+from cassandra.query import BatchStatement, SimpleStatement
 from psycopg2.extras import RealDictCursor
 from psycopg2.extensions import connection
 from cassandra.cluster import Session
@@ -8,6 +9,7 @@ from typing import *
 import uuid
 import asyncio
 from functools import partial
+from cassandra.policies import RetryPolicy
 import databases
 import utils
 
@@ -306,16 +308,20 @@ def delete_non_accepted_chat_room(**kwargs) -> None:
         chat_room_id = %(chat_room_id)s;
     """
 
+    # Create the instance of the "BatchStatement" to delete bulk data in Cassandra by one query.
+    batch = BatchStatement(retry_policy=RetryPolicy)
+
     # For each organization that can serve the chat room, we delete an entry in the database.
     for organization_id in organizations_ids:
         cql_arguments["organization_id"] = uuid.UUID(organization_id)
+        batch.add(SimpleStatement(cql_statement, cql_arguments))
 
-        # Execute the CQL query dynamically, in a convenient and safe way.
-        try:
-            cassandra_connection.execute(cql_statement, cql_arguments)
-        except Exception as error:
-            logger.error(error)
-            raise Exception(error)
+    # Execute the CQL query dynamically, in a convenient and safe way.
+    try:
+        cassandra_connection.execute(batch)
+    except Exception as error:
+        logger.error(error)
+        raise Exception(error)
 
     # Return nothing.
     return None
