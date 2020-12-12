@@ -167,6 +167,9 @@ def set_cassandra_keyspace(cassandra_connection: Session) -> None:
                 logger.error(error)
                 raise Exception(error)
 
+    # Return nothing.
+    return None
+
 
 def postgresql_wrapper(function):
     @wraps(function)
@@ -473,6 +476,9 @@ def create_non_accepted_chat_room(**kwargs) -> None:
             logger.error(error)
             raise Exception(error)
 
+    # Return nothing.
+    return None
+
 
 @fire_and_forget_wrapper
 def delete_completed_chat_room(**kwargs) -> None:
@@ -506,6 +512,9 @@ def delete_completed_chat_room(**kwargs) -> None:
     except Exception as error:
         logger.error(error)
         raise Exception(error)
+
+    # Return nothing.
+    return None
 
 
 @postgresql_wrapper
