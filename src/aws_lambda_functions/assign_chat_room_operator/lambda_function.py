@@ -475,13 +475,13 @@ def analyze_and_format_operator_data(operator_data: Dict[AnyStr, Any]) -> Dict[A
     if operator_data:
         gender, country, role, organization = {}, {}, {}, {}
         for key, value in operator_data.items():
-            if key.startwith("gender_"):
+            if key.startswith("gender_"):
                 gender[utils.camel_case(key)] = value
-            elif key.startwith("country_"):
+            elif key.startswith("country_"):
                 country[utils.camel_case(key)] = value
-            elif key.startwith("role_"):
+            elif key.startswith("role_"):
                 role[utils.camel_case(key)] = value
-            elif key.startwith("organization_"):
+            elif key.startswith("organization_"):
                 organization[utils.camel_case(key)] = value
             else:
                 operator[utils.camel_case(key)] = value
