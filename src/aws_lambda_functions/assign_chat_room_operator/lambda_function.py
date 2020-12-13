@@ -1,6 +1,5 @@
 import logging
 import os
-from cassandra.query import BatchStatement, SimpleStatement
 from psycopg2.extras import RealDictCursor
 from psycopg2.extensions import connection
 from cassandra.cluster import Session
@@ -9,7 +8,9 @@ from typing import *
 import uuid
 import asyncio
 from functools import partial
-from cassandra.policies import RetryPolicy
+from threading import Thread
+from queue import Queue
+from cassandra.query import BatchStatement, SimpleStatement
 import databases
 import utils
 
@@ -34,6 +35,48 @@ CASSANDRA_KEYSPACE_NAME = os.environ["CASSANDRA_KEYSPACE_NAME"]
 # Any subsequent call to the function will use the same database connection until the container stops.
 POSTGRESQL_CONNECTION = None
 CASSANDRA_CONNECTION = None
+
+
+def run_multithreading_tasks(functions: List[Dict[AnyStr, Union[Callable, Dict[AnyStr, Any]]]]) -> Dict[AnyStr, Any]:
+    # Create the empty list to save all parallel threads.
+    threads = []
+
+    # Create the queue to store all results of each functions.
+    queue = Queue()
+
+    # Create a thread for each function.
+    for function in functions:
+        # Check whether the input arguments have keys in their dictionaries.
+        try:
+            function_object = function["function_object"]
+        except KeyError as error:
+            logger.error(error)
+            raise Exception(error)
+        try:
+            function_arguments = function["function_arguments"]
+        except KeyError as error:
+            logger.error(error)
+            raise Exception(error)
+
+        # Create a thread.
+        thread = Thread(target=function_object, kwargs=function_arguments)
+        threads.append(thread)
+
+    # Start all parallel threads.
+    for thread in threads:
+        thread.start()
+
+    # Wait until all parallel threads are finished.
+    for thread in threads:
+        thread.join()
+
+    # Get the results of all threads.
+    results = {}
+    while not queue.empty():
+        results = {**results, **queue.get()}
+
+    # Return the results of all threads.
+    return results
 
 
 def check_input_arguments(event: Dict[AnyStr, Any]) -> Dict[AnyStr, Any]:
@@ -230,7 +273,6 @@ def fire_and_forget_wrapper(function):
             return loop.run_in_executor(None, partial(function, *args, **kwargs))
         else:
             raise Exception("The '%s' function must be a callable.".format(function.__name__))
-
     return wrapper
 
 
@@ -309,12 +351,12 @@ def delete_non_accepted_chat_room(**kwargs) -> None:
     """
 
     # Create the instance of the "BatchStatement" to delete bulk data in Cassandra by one query.
-    batch = BatchStatement(retry_policy=RetryPolicy)
+    batch = BatchStatement()
 
     # For each organization that can serve the chat room, we delete an entry in the database.
     for organization_id in organizations_ids:
         cql_arguments["organization_id"] = uuid.UUID(organization_id)
-        batch.add(SimpleStatement(cql_statement, cql_arguments))
+        batch.add(SimpleStatement(cql_statement), cql_arguments)
 
     # Execute the CQL query dynamically, in a convenient and safe way.
     try:

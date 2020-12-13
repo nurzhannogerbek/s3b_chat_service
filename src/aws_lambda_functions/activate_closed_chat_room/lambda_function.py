@@ -1,6 +1,5 @@
 import logging
 import os
-from cassandra.query import BatchStatement, SimpleStatement
 from multiprocessing import Process, Pipe
 from psycopg2.extras import RealDictCursor
 from psycopg2.extensions import connection
@@ -10,7 +9,6 @@ from typing import *
 import uuid
 import asyncio
 from functools import partial
-from cassandra.policies import RetryPolicy
 import databases
 import utils
 
@@ -37,11 +35,11 @@ POSTGRESQL_CONNECTION = None
 CASSANDRA_CONNECTION = None
 
 
-def execute_parallel_processes(functions: List[Dict[AnyStr, Union[Callable, Dict[AnyStr, Any]]]]) -> Dict[AnyStr, Any]:
-    # Create an empty list to save all parallel processes.
+def run_multiprocessing_tasks(functions: List[Dict[AnyStr, Union[Callable, Dict[AnyStr, Any]]]]) -> Dict[AnyStr, Any]:
+    # Create the empty list to save all parallel processes.
     processes = []
 
-    # Create an empty list of pipes to keep all connections.
+    # Create the empty list of pipes to keep all connections.
     pipes = []
 
     # Create a process for each function.
@@ -706,7 +704,7 @@ def lambda_handler(event, context):
     )
 
     # Run several functions in parallel to analyze and format all necessary data.
-    results_of_processes = execute_parallel_processes([
+    results_of_processes = run_multiprocessing_tasks([
         {
             "function_object": analyze_and_format_aggregated_data,
             "function_arguments": {
@@ -718,7 +716,7 @@ def lambda_handler(event, context):
             "function_arguments": {
                 "client_data": client_data
             }
-        },
+        }
     ])
 
     # Define variables that store formatted information about the channel and client.
