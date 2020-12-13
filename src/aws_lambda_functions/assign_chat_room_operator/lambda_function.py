@@ -10,7 +10,7 @@ import asyncio
 from functools import partial
 from threading import Thread
 from queue import Queue
-from cassandra.query import BatchStatement, SimpleStatement
+from cassandra.query import BatchStatement, SimpleStatement, BatchType
 import databases
 import utils
 
@@ -351,7 +351,7 @@ def delete_non_accepted_chat_room(**kwargs) -> None:
     """
 
     # Create the instance of the "BatchStatement" to delete bulk data in Cassandra by one query.
-    batch = BatchStatement()
+    batch = BatchStatement(batch_type=BatchType.UNLOGGED)
 
     # For each organization that can serve the chat room, we delete an entry in the database.
     for organization_id in organizations_ids:
