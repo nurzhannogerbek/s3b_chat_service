@@ -191,7 +191,6 @@ def postgresql_wrapper(function):
         result = function(**kwargs)
         cursor.close()
         return result
-
     return wrapper
 
 
