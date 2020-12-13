@@ -530,26 +530,35 @@ def lambda_handler(event, context):
         {
             "function_object": create_completed_chat_room,
             "function_arguments": {
-                "operator_id": accepted_chat_room_data["operator_id"],
-                "channel_id": accepted_chat_room_data["channel_id"],
-                "chat_room_id": accepted_chat_room_data["chat_room_id"],
-                "client_id": accepted_chat_room_data["client_id"],
-                "last_message_content": accepted_chat_room_data["last_message_content"],
-                "last_message_date_time": accepted_chat_room_data["last_message_date_time"]
+                "cassandra_connection": cassandra_connection,
+                "cql_arguments": {
+                    "operator_id": accepted_chat_room_data["operator_id"],
+                    "channel_id": accepted_chat_room_data["channel_id"],
+                    "chat_room_id": accepted_chat_room_data["chat_room_id"],
+                    "client_id": accepted_chat_room_data["client_id"],
+                    "last_message_content": accepted_chat_room_data["last_message_content"],
+                    "last_message_date_time": accepted_chat_room_data["last_message_date_time"]
+                }
             }
         },
         {
             "function_object": delete_accepted_chat_room,
             "function_arguments": {
-                "operator_id": accepted_chat_room_data["operator_id"],
-                "channel_id": accepted_chat_room_data["channel_id"],
-                "chat_room_id": accepted_chat_room_data["chat_room_id"]
+                "cassandra_connection": cassandra_connection,
+                "cql_arguments": {
+                    "operator_id": accepted_chat_room_data["operator_id"],
+                    "channel_id": accepted_chat_room_data["channel_id"],
+                    "chat_room_id": accepted_chat_room_data["chat_room_id"]
+                }
             }
         },
         {
             "function_object": update_chat_room_status,
             "function_arguments": {
-                "chat_room_id": chat_room_id
+                "postgresql_connection": postgresql_connection,
+                "sql_arguments": {
+                    "chat_room_id": chat_room_id
+                }
             }
         },
         {
