@@ -468,7 +468,7 @@ def analyze_and_format_operator_data(operator_data: Dict[AnyStr, Any]) -> Dict[A
                 country[utils.camel_case(key)] = value
             elif key.startswith("role_"):
                 role[utils.camel_case(key)] = value
-            elif key.startswith("organization_"):
+            elif "organization" in key:
                 organization[utils.camel_case(key)] = value
             else:
                 operator[utils.camel_case(key)] = value
