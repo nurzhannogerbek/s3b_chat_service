@@ -1,7 +1,6 @@
 import logging
 import os
 from psycopg2.extras import RealDictCursor
-from psycopg2.extensions import connection
 from cassandra.cluster import Session
 from functools import wraps
 from typing import *
@@ -38,10 +37,10 @@ def run_multithreading_tasks(functions: List[Dict[AnyStr, Union[Callable, Dict[A
     # Create the empty list to save all parallel threads.
     threads = []
 
-    # Create the queue to store all results of each functions.
+    # Create the queue to store all results of functions.
     queue = Queue()
 
-    # Create a thread for each function.
+    # Create the thread for each function.
     for function in functions:
         # Check whether the input arguments have keys in their dictionaries.
         try:
@@ -58,7 +57,7 @@ def run_multithreading_tasks(functions: List[Dict[AnyStr, Union[Callable, Dict[A
         # Add the instance of the queue to the list of function arguments.
         function_arguments["queue"] = queue
 
-        # Create a thread.
+        # Create the thread.
         thread = Thread(target=function_object, kwargs=function_arguments)
         threads.append(thread)
 
@@ -79,10 +78,15 @@ def run_multithreading_tasks(functions: List[Dict[AnyStr, Union[Callable, Dict[A
     return results
 
 
-def check_input_arguments(event: Dict[AnyStr, Any]) -> Dict[AnyStr, Any]:
+def check_input_arguments(**kwargs) -> None:
     # Make sure that all the necessary arguments for the AWS Lambda function are present.
     try:
-        input_arguments = event["arguments"]["input"]
+        input_arguments = kwargs["event"]["arguments"]["input"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        queue = kwargs["queue"]
     except KeyError as error:
         logger.error(error)
         raise Exception(error)
@@ -100,15 +104,20 @@ def check_input_arguments(event: Dict[AnyStr, Any]) -> Dict[AnyStr, Any]:
             except ValueError:
                 raise Exception("The '%s' argument format is not UUID.".format(utils.camel_case(argument_name)))
 
-    # Create the response structure and return it.
-    return {
-        "chat_room_id": input_arguments.get("chatRoomId", None),
-        "operator_id": input_arguments.get("operatorId", None),
-        "client_id": input_arguments.get("clientId", None)
-    }
+    # Put the result of the function in the queue.
+    queue.put({
+        "input_arguments": {
+            "chat_room_id": input_arguments.get("chatRoomId", None),
+            "operator_id": input_arguments.get("operatorId", None),
+            "client_id": input_arguments.get("clientId", None)
+        }
+    })
+
+    # Return nothing.
+    return None
 
 
-def reuse_or_recreate_postgresql_connection() -> connection:
+def reuse_or_recreate_postgresql_connection(queue: Queue) -> None:
     global POSTGRESQL_CONNECTION
     if not POSTGRESQL_CONNECTION:
         try:
@@ -122,10 +131,11 @@ def reuse_or_recreate_postgresql_connection() -> connection:
         except Exception as error:
             logger.error(error)
             raise Exception("Unable to connect to the PostgreSQL database.")
-    return POSTGRESQL_CONNECTION
+    queue.put({"postgresql_connection": POSTGRESQL_CONNECTION})
+    return None
 
 
-def reuse_or_recreate_cassandra_connection() -> Session:
+def reuse_or_recreate_cassandra_connection(queue: Queue) -> None:
     global CASSANDRA_CONNECTION
     if not CASSANDRA_CONNECTION:
         try:
@@ -139,7 +149,8 @@ def reuse_or_recreate_cassandra_connection() -> Session:
         except Exception as error:
             logger.error(error)
             raise Exception("Unable to connect to the Cassandra database.")
-    return CASSANDRA_CONNECTION
+    queue.put({"cassandra_connection": CASSANDRA_CONNECTION})
+    return None
 
 
 def set_cassandra_keyspace(cassandra_connection: Session) -> None:
@@ -559,15 +570,31 @@ def lambda_handler(event, context):
     :param event: The AWS Lambda function uses this parameter to pass in event data to the handler.
     :param context: The AWS Lambda function uses this parameter to provide runtime information to your handler.
     """
-    # First check and then define the input arguments of the AWS Lambda function.
-    input_arguments = check_input_arguments(event=event)
+    # Run several initialization functions in parallel.
+    results_of_tasks = run_multithreading_tasks([
+        {
+            "function_object": check_input_arguments,
+            "function_arguments": {
+                "event": event
+            }
+        },
+        {
+            "function_object": reuse_or_recreate_postgresql_connection
+        },
+        {
+            "function_object": reuse_or_recreate_cassandra_connection
+        }
+    ])
+
+    # Define the input arguments of the AWS Lambda function.
+    input_arguments = results_of_tasks["input_arguments"]
     chat_room_id = input_arguments["chat_room_id"]
     operator_id = input_arguments["operator_id"]
     client_id = input_arguments["client_id"]
 
     # Define the instances of the database connections.
-    postgresql_connection = reuse_or_recreate_postgresql_connection()
-    cassandra_connection = reuse_or_recreate_cassandra_connection()
+    postgresql_connection = results_of_tasks["postgresql_connection"]
+    cassandra_connection = results_of_tasks["cassandra_connection"]
     set_cassandra_keyspace(cassandra_connection=cassandra_connection)
 
     # Define the variable that stores information about aggregated data.
@@ -600,7 +627,7 @@ def lambda_handler(event, context):
     last_message_content = last_message_data.get("last_message_content", None)
     last_message_date_time = last_message_data.get("last_message_date_time", None)
 
-    # Run several related functions to create/update/delete all necessary data in different databases tables.
+    # Run several functions in parallel to create/update/delete all necessary data in different databases tables.
     results_of_tasks = run_multithreading_tasks([
         {
             "function_object": create_accepted_chat_room,
@@ -663,7 +690,7 @@ def lambda_handler(event, context):
     # Define the variable that stores information about the specific operator.
     operator_data = results_of_tasks["operator_data"]
 
-    # Analyze and format operator data.
+    # Define the variable that stores analyzed and formatted operator data.
     operator = analyze_and_format_operator_data(operator_data=operator_data)
 
     # Create the response structure and return it.
