@@ -6,11 +6,8 @@ from cassandra.cluster import Session
 from functools import wraps
 from typing import *
 import uuid
-import asyncio
-from functools import partial
 from threading import Thread
 from queue import Queue
-from cassandra.query import BatchStatement, SimpleStatement, BatchType
 import databases
 import utils
 
@@ -57,6 +54,9 @@ def run_multithreading_tasks(functions: List[Dict[AnyStr, Union[Callable, Dict[A
         except KeyError as error:
             logger.error(error)
             raise Exception(error)
+
+        # Add the instance of the queue to the list of function arguments.
+        function_arguments["queue"] = queue
 
         # Create a thread.
         thread = Thread(target=function_object, kwargs=function_arguments)
@@ -265,18 +265,6 @@ def get_last_message_data(**kwargs) -> Dict[AnyStr, Any]:
     return last_message_data
 
 
-def fire_and_forget_wrapper(function):
-    @wraps(function)
-    def wrapper(*args, **kwargs):
-        loop = asyncio.get_event_loop()
-        if callable(function):
-            return loop.run_in_executor(None, partial(function, *args, **kwargs))
-        else:
-            raise Exception("The '%s' function must be a callable.".format(function.__name__))
-    return wrapper
-
-
-@fire_and_forget_wrapper
 def create_accepted_chat_room(**kwargs) -> None:
     # Check if the input dictionary has all the necessary keys.
     try:
@@ -350,27 +338,24 @@ def delete_non_accepted_chat_room(**kwargs) -> None:
         chat_room_id = %(chat_room_id)s;
     """
 
-    # Create the instance of the "BatchStatement" to delete bulk data in Cassandra by one query.
-    batch = BatchStatement(batch_type=BatchType.UNLOGGED)
-
     # For each organization that can serve the chat room, we delete an entry in the database.
     for organization_id in organizations_ids:
+        # Add or update the value of the argument.
         cql_arguments["organization_id"] = uuid.UUID(organization_id)
-        batch.add(SimpleStatement(cql_statement), cql_arguments)
 
-    # Execute the CQL query dynamically, in a convenient and safe way.
-    try:
-        cassandra_connection.execute(batch)
-    except Exception as error:
-        logger.error(error)
-        raise Exception(error)
+        # Execute the CQL query dynamically, in a convenient and safe way.
+        try:
+            cassandra_connection.execute(cql_statement, cql_arguments)
+        except Exception as error:
+            logger.error(error)
+            raise Exception(error)
 
     # Return nothing.
     return None
 
 
 @postgresql_wrapper
-def update_chat_room_status(**kwargs) -> Dict[AnyStr, Any]:
+def update_chat_room_status(**kwargs) -> None:
     # Check if the input dictionary has all the necessary keys.
     try:
         cursor = kwargs["cursor"]
@@ -379,6 +364,11 @@ def update_chat_room_status(**kwargs) -> Dict[AnyStr, Any]:
         raise Exception(error)
     try:
         sql_arguments = kwargs["sql_arguments"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        queue = kwargs["queue"]
     except KeyError as error:
         logger.error(error)
         raise Exception(error)
@@ -402,11 +392,13 @@ def update_chat_room_status(**kwargs) -> Dict[AnyStr, Any]:
         logger.error(error)
         raise Exception(error)
 
-    # Create the response structure and return it.
-    return cursor.fetchone()["chat_room_status"]
+    # Put the result of the function in the queue.
+    queue.put({"chat_room_status": cursor.fetchone()["chat_room_status"]})
+
+    # Return nothing.
+    return None
 
 
-@fire_and_forget_wrapper
 @postgresql_wrapper
 def set_responsible_operator(**kwargs) -> None:
     # Check if the input dictionary has all the necessary keys.
@@ -444,7 +436,7 @@ def set_responsible_operator(**kwargs) -> None:
 
 
 @postgresql_wrapper
-def get_operator_data(**kwargs) -> Dict[AnyStr, Any]:
+def get_operator_data(**kwargs) -> None:
     # Check if the input dictionary has all the necessary keys.
     try:
         cursor = kwargs["cursor"]
@@ -453,6 +445,11 @@ def get_operator_data(**kwargs) -> Dict[AnyStr, Any]:
         raise Exception(error)
     try:
         sql_arguments = kwargs["sql_arguments"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        queue = kwargs["queue"]
     except KeyError as error:
         logger.error(error)
         raise Exception(error)
@@ -525,8 +522,11 @@ def get_operator_data(**kwargs) -> Dict[AnyStr, Any]:
         logger.error(error)
         raise Exception(error)
 
-    # Create the response structure and return it.
-    return cursor.fetchone()
+    # Put the result of the function in the queue.
+    queue.put({"operator_data": cursor.fetchone()})
+
+    # Return nothing.
+    return None
 
 
 def analyze_and_format_operator_data(operator_data: Dict[AnyStr, Any]) -> Dict[AnyStr, Any]:
@@ -600,49 +600,68 @@ def lambda_handler(event, context):
     last_message_content = last_message_data.get("last_message_content", None)
     last_message_date_time = last_message_data.get("last_message_date_time", None)
 
-    # Run several related functions to create/delete all necessary data in different databases tables.
-    create_accepted_chat_room(
-        cassandra_connection=cassandra_connection,
-        cql_arguments={
-            "operator_id": uuid.UUID(operator_id),
-            "channel_id": uuid.UUID(channel_id),
-            "chat_room_id": uuid.UUID(chat_room_id),
-            "client_id": uuid.UUID(client_id),
-            "last_message_content": last_message_content,
-            "last_message_date_time": last_message_date_time
+    # Run several related functions to create/update/delete all necessary data in different databases tables.
+    results_of_tasks = run_multithreading_tasks([
+        {
+            "function_object": create_accepted_chat_room,
+            "function_arguments": {
+                "cassandra_connection": cassandra_connection,
+                "cql_arguments": {
+                    "operator_id": uuid.UUID(operator_id),
+                    "channel_id": uuid.UUID(channel_id),
+                    "chat_room_id": uuid.UUID(chat_room_id),
+                    "client_id": uuid.UUID(client_id),
+                    "last_message_content": last_message_content,
+                    "last_message_date_time": last_message_date_time
+                }
+            }
+        },
+        {
+            "function_object": delete_non_accepted_chat_room,
+            "function_arguments": {
+                "cassandra_connection": cassandra_connection,
+                "cql_arguments": {
+                    "organizations_ids": organizations_ids,
+                    "channel_id": uuid.UUID(channel_id),
+                    "chat_room_id": uuid.UUID(chat_room_id)
+                }
+            }
+        },
+        {
+            "function_object": set_responsible_operator,
+            "function_arguments": {
+                "postgresql_connection": postgresql_connection,
+                "sql_arguments": {
+                    "chat_room_id": chat_room_id,
+                    "operator_id": operator_id
+                }
+            }
+        },
+        {
+            "function_object": update_chat_room_status,
+            "function_arguments": {
+                "postgresql_connection": postgresql_connection,
+                "sql_arguments": {
+                    "chat_room_id": chat_room_id
+                }
+            }
+        },
+        {
+            "function_object": get_operator_data,
+            "function_arguments": {
+                "postgresql_connection": postgresql_connection,
+                "sql_arguments": {
+                    "operator_id": operator_id
+                }
+            }
         }
-    )
-    delete_non_accepted_chat_room(
-        cassandra_connection=cassandra_connection,
-        cql_arguments={
-            "organizations_ids": organizations_ids,
-            "channel_id": uuid.UUID(channel_id),
-            "chat_room_id": uuid.UUID(chat_room_id)
-        }
-    )
-    set_responsible_operator(
-        postgresql_connection=postgresql_connection,
-        sql_arguments={
-            "chat_room_id": chat_room_id,
-            "operator_id": operator_id
-        }
-    )
+    ])
 
     # Define the variable that stores information about the status of the chat room.
-    chat_room_status = update_chat_room_status(
-        postgresql_connection=postgresql_connection,
-        sql_arguments={
-            "chat_room_id": chat_room_id
-        }
-    )
+    chat_room_status = results_of_tasks["chat_room_status"]
 
     # Define the variable that stores information about the specific operator.
-    operator_data = get_operator_data(
-        postgresql_connection=postgresql_connection,
-        sql_arguments={
-            "operator_id": operator_id
-        }
-    )
+    operator_data = results_of_tasks["operator_data"]
 
     # Analyze and format operator data.
     operator = analyze_and_format_operator_data(operator_data=operator_data)

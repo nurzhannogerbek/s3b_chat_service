@@ -704,7 +704,7 @@ def lambda_handler(event, context):
     )
 
     # Run several functions in parallel to analyze and format all necessary data.
-    results_of_processes = run_multiprocessing_tasks([
+    results_of_tasks = run_multiprocessing_tasks([
         {
             "function_object": analyze_and_format_aggregated_data,
             "function_arguments": {
@@ -720,8 +720,8 @@ def lambda_handler(event, context):
     ])
 
     # Define variables that store formatted information about the channel and client.
-    channel = results_of_processes["channel"]
-    client = results_of_processes["client"]
+    channel = results_of_tasks["channel"]
+    client = results_of_tasks["client"]
 
     # Create the response structure and return it.
     return {
