@@ -410,7 +410,7 @@ def update_chat_room_status(**kwargs) -> None:
 
 
 @postgresql_wrapper
-def set_responsible_operator(**kwargs) -> None:
+def add_operator_as_chat_room_member(**kwargs) -> None:
     # Check if the input dictionary has all the necessary keys.
     try:
         cursor = kwargs["cursor"]
@@ -423,7 +423,7 @@ def set_responsible_operator(**kwargs) -> None:
         logger.error(error)
         raise Exception(error)
 
-    # Prepare the SQL query that records that the operator took the chat room to work.
+    # Prepare the SQL query that adds specific operator as the chat room member.
     sql_statement = """
     insert into chat_rooms_users_relationship (
         chat_room_id,
@@ -656,7 +656,7 @@ def lambda_handler(event, context):
             }
         },
         {
-            "function_object": set_responsible_operator,
+            "function_object": add_operator_as_chat_room_member,
             "function_arguments": {
                 "postgresql_connection": postgresql_connection,
                 "sql_arguments": {
