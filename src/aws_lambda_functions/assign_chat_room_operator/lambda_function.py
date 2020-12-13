@@ -579,10 +579,12 @@ def lambda_handler(event, context):
             }
         },
         {
-            "function_object": reuse_or_recreate_postgresql_connection
+            "function_object": reuse_or_recreate_postgresql_connection,
+            "function_arguments": {}
         },
         {
-            "function_object": reuse_or_recreate_cassandra_connection
+            "function_object": reuse_or_recreate_cassandra_connection,
+            "function_arguments": {}
         }
     ])
 
