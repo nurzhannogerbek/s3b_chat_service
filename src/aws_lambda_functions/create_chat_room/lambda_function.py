@@ -92,7 +92,7 @@ def check_input_arguments(**kwargs) -> None:
         raise Exception(error)
 
     # Check the format and values of required arguments in the list of input arguments.
-    required_arguments = ["channelTechnicalId", "channelTypeName", "clientId"]
+    required_arguments = ["channelTechnicalId", "channelTypeName", "clientId", "lastMessageContent"]
     for argument_name, argument_value in input_arguments.items():
         if argument_name not in required_arguments:
             raise Exception("The '%s' argument doesn't exist.".format(utils.camel_case(argument_name)))
@@ -110,6 +110,7 @@ def check_input_arguments(**kwargs) -> None:
             "channel_technical_id": input_arguments.get("channelTechnicalId", None),
             "channel_type_name": input_arguments.get("channelTypeName", None),
             "client_id": input_arguments.get("clientId", None),
+            "last_message_content": input_arguments.get("lastMessageContent", None),
             "telegram_chat_id": input_arguments.get("telegramChatId", None),
             "whatsapp_chat_id": input_arguments.get("whatsappChatId", None)
         }
@@ -455,12 +456,18 @@ def create_non_accepted_chat_room(**kwargs) -> None:
         organization_id,
         channel_id,
         chat_room_id,
-        client_id
+        client_id,
+        last_message_content,
+        last_message_date_time,
+        unread_messages_number
     ) values (
         %(organization_id)s,
         %(channel_id)s,
         %(chat_room_id)s,
-        %(client_id)s
+        %(client_id)s,
+        %(last_message_content)s,
+        toTimestamp(now()),
+        1
     );
     """
 
@@ -665,6 +672,7 @@ def lambda_handler(event, context):
     channel_technical_id = input_arguments["channel_technical_id"]
     channel_type_name = input_arguments["channel_type_name"]
     client_id = input_arguments["client_id"]
+    last_message_content = input_arguments["last_message_content"]
     telegram_chat_id = input_arguments["telegram_chat_id"]
     whatsapp_chat_id = input_arguments["whatsapp_chat_id"]
 
@@ -737,7 +745,8 @@ def lambda_handler(event, context):
                     "organizations_ids": organizations_ids,
                     "channel_id": uuid.UUID(channel_id),
                     "chat_room_id": uuid.UUID(chat_room_id),
-                    "client_id": uuid.UUID(client_id)
+                    "client_id": uuid.UUID(client_id),
+                    "last_message_content": last_message_content
                 }
             }
         },
