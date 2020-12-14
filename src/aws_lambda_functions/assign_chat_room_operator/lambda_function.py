@@ -296,14 +296,16 @@ def create_accepted_chat_room(**kwargs) -> None:
         chat_room_id,
         client_id,
         last_message_content,
-        last_message_date_time
+        last_message_date_time,
+        unread_messages_number
     ) values (
         %(operator_id)s,
         %(channel_id)s,
         %(chat_room_id)s,
         %(client_id)s,
         %(last_message_content)s,
-        %(last_message_date_time)s
+        %(last_message_date_time)s,
+        0
     );
     """
 
