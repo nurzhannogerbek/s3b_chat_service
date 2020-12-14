@@ -7,6 +7,7 @@ from typing import *
 import uuid
 from threading import Thread
 from queue import Queue
+from datetime import datetime
 import databases
 import utils
 
@@ -92,7 +93,7 @@ def check_input_arguments(**kwargs) -> None:
         raise Exception(error)
 
     # Check the format and values of required arguments in the list of input arguments.
-    required_arguments = ["chatRoomId", "clientId"]
+    required_arguments = ["chatRoomId", "clientId", "lastMessageContent"]
     for argument_name, argument_value in input_arguments.items():
         if argument_name not in required_arguments:
             raise Exception("The '%s' argument doesn't exist.".format(utils.camel_case(argument_name)))
@@ -108,7 +109,8 @@ def check_input_arguments(**kwargs) -> None:
     queue.put({
         "input_arguments": {
             "chat_room_id": input_arguments.get("chatRoomId", None),
-            "client_id": input_arguments.get("clientId", None)
+            "client_id": input_arguments.get("clientId", None),
+            "last_message_content": input_arguments.get("lastMessageContent", None)
         }
     })
 
@@ -463,14 +465,16 @@ def create_non_accepted_chat_room(**kwargs) -> None:
         chat_room_id,
         client_id,
         last_message_content,
-        last_message_date_time
+        last_message_date_time,
+        unread_messages_number
     ) values (
         %(organization_id)s,
         %(channel_id)s,
         %(chat_room_id)s,
         %(client_id)s,
         %(last_message_content)s,
-        %(last_message_date_time)s
+        %(last_message_date_time)s,
+        0
     );
     """
 
@@ -665,6 +669,7 @@ def lambda_handler(event, context):
     input_arguments = results_of_tasks["input_arguments"]
     chat_room_id = input_arguments["chat_room_id"]
     client_id = input_arguments["client_id"]
+    last_message_content = input_arguments["last_message_content"]
 
     # Define the instances of the database connections.
     postgresql_connection = results_of_tasks["postgresql_connection"]
@@ -712,19 +717,8 @@ def lambda_handler(event, context):
     channel_id = aggregated_data["channel_id"]
     organizations_ids = aggregated_data["organizations_ids"]
 
-    # Define the variable that stores information about last message data of the completed chat room.
-    last_message_data = get_last_message_data(
-        cassandra_connection=cassandra_connection,
-        cql_arguments={
-            "operator_id": uuid.UUID(operator_id),
-            "channel_id": uuid.UUID(channel_id),
-            "chat_room_id": uuid.UUID(chat_room_id)
-        }
-    )
-
-    # Define a few necessary variables that will be used in the future.
-    last_message_content = last_message_data.get("last_message_content", None)
-    last_message_date_time = last_message_data.get("last_message_date_time", None)
+    # Define the current time.
+    last_message_date_time = datetime.now()
 
     # Run several functions in parallel to create/update/delete all necessary data in different databases tables.
     results_of_tasks = run_multithreading_tasks([
@@ -790,5 +784,8 @@ def lambda_handler(event, context):
         "channel": channel,
         "channelId": channel_id,
         "client": client,
-        "organizationsIds": organizations_ids
+        "organizationsIds": organizations_ids,
+        "lastMessageContent": last_message_content,
+        "lastMessageDateTime": last_message_date_time,
+        "unreadMessagesNumber": 1
     }
