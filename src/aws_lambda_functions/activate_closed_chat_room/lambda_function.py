@@ -399,46 +399,6 @@ def get_client_data(**kwargs) -> None:
     return None
 
 
-def get_last_message_data(**kwargs) -> Dict[AnyStr, Any]:
-    # Check if the input dictionary has all the necessary keys.
-    try:
-        cassandra_connection = kwargs["cassandra_connection"]
-    except KeyError as error:
-        logger.error(error)
-        raise Exception(error)
-    try:
-        cql_arguments = kwargs["cql_arguments"]
-    except KeyError as error:
-        logger.error(error)
-        raise Exception(error)
-
-    # Prepare the CQL query that returns information about the latest message data.
-    cql_statement = """
-    select
-        last_message_content,
-        last_message_date_time
-    from
-        completed_chat_rooms
-    where
-        operator_id = %(operator_id)s
-    and
-        channel_id = %(channel_id)s
-    and
-        chat_room_id = %(chat_room_id)s
-    limit 1;
-    """
-
-    # Execute the CQL query dynamically, in a convenient and safe way.
-    try:
-        last_message_data = cassandra_connection.execute(cql_statement, cql_arguments).one()
-    except Exception as error:
-        logger.error(error)
-        raise Exception(error)
-
-    # Return the information about last message data of the completed chat room.
-    return last_message_data
-
-
 def create_non_accepted_chat_room(**kwargs) -> None:
     # Check if the input dictionary has all the necessary keys.
     try:
