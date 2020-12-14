@@ -746,6 +746,6 @@ def lambda_handler(event, context):
         "client": client,
         "organizationsIds": organizations_ids,
         "lastMessageContent": last_message_content,
-        "lastMessageDateTime": last_message_date_time,
+        "lastMessageDateTime": last_message_date_time.strftime("%Y-%m-%d %H:%M:%S"),
         "unreadMessagesNumber": 1
     }
