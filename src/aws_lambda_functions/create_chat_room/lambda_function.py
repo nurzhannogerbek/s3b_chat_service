@@ -7,6 +7,7 @@ from typing import *
 import uuid
 from threading import Thread
 from queue import Queue
+from datetime import datetime
 import databases
 import utils
 
@@ -466,8 +467,8 @@ def create_non_accepted_chat_room(**kwargs) -> None:
         %(chat_room_id)s,
         %(client_id)s,
         %(last_message_content)s,
-        toTimestamp(now()),
-        1
+        %(last_message_date_time)s,
+        0
     );
     """
 
@@ -725,6 +726,9 @@ def lambda_handler(event, context):
     # Generate the unique identifier for the new chat room.
     chat_room_id = str(uuid.uuid1())
 
+    # Define the current time.
+    last_message_date_time = datetime.now()
+
     # Run several functions in parallel to create/update/delete all necessary data in different databases tables.
     results_of_tasks = run_multithreading_tasks([
         {
@@ -746,7 +750,8 @@ def lambda_handler(event, context):
                     "channel_id": uuid.UUID(channel_id),
                     "chat_room_id": uuid.UUID(chat_room_id),
                     "client_id": uuid.UUID(client_id),
-                    "last_message_content": last_message_content
+                    "last_message_content": last_message_content,
+                    "last_message_date_time": last_message_date_time
                 }
             }
         },
@@ -800,5 +805,8 @@ def lambda_handler(event, context):
         "channel": channel,
         "channelId": channel_id,
         "client": client,
-        "organizationsIds": organizations_ids
+        "organizationsIds": organizations_ids,
+        "lastMessageContent": last_message_content,
+        "lastMessageDateTime": last_message_date_time,
+        "unreadMessagesNumber": 1
     }
