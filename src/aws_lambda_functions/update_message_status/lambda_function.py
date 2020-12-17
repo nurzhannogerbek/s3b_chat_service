@@ -85,7 +85,7 @@ def check_input_arguments(**kwargs) -> None:
         raise Exception(error)
 
     # Check the format and values of required arguments in the list of input arguments.
-    required_arguments = ["chatRoomId", "messageId", "messageStatus"]
+    required_arguments = ["chatRoomId", "messagesIds", "messageStatus"]
     for argument_name, argument_value in input_arguments.items():
         if argument_name not in required_arguments:
             raise Exception("The '%s' argument doesn't exist.".format(utils.camel_case(argument_name)))
@@ -101,7 +101,7 @@ def check_input_arguments(**kwargs) -> None:
     queue.put({
         "input_arguments": {
             "chat_room_id": input_arguments.get("chatRoomId", None),
-            "message_id": input_arguments.get("messageId", None),
+            "messages_ids": input_arguments.get("messagesIds", None),
             "message_status": input_arguments.get("messageStatus", None)
         }
     })
@@ -153,7 +153,7 @@ def set_cassandra_keyspace(cassandra_connection: Session) -> None:
     return None
 
 
-def update_chat_room_message_status(**kwargs) -> None:
+def update_chat_room_messages_statuses(**kwargs) -> None:
     # Check if the input dictionary has all the necessary keys.
     try:
         cassandra_connection = kwargs["cassandra_connection"]
@@ -167,6 +167,11 @@ def update_chat_room_message_status(**kwargs) -> None:
         raise Exception(error)
     try:
         column_name = cql_arguments["column_name"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        messages_ids = cql_arguments["messages_ids"]
     except KeyError as error:
         logger.error(error)
         raise Exception(error)
@@ -184,18 +189,23 @@ def update_chat_room_message_status(**kwargs) -> None:
     if exists;
     """.format(column_name.lower())
 
-    # Execute the CQL query dynamically, in a convenient and safe way.
-    try:
-        cassandra_connection.execute(cql_statement, cql_arguments)
-    except Exception as error:
-        logger.error(error)
-        raise Exception(error)
+    # Update the status of each message individually.
+    for message_id in messages_ids:
+        # Add or update the value of the argument.
+        cql_arguments["message_id"] = uuid.UUID(message_id)
+
+        # Execute the CQL query dynamically, in a convenient and safe way.
+        try:
+            cassandra_connection.execute(cql_statement, cql_arguments)
+        except Exception as error:
+            logger.error(error)
+            raise Exception(error)
 
     # Return nothing.
     return None
 
 
-def get_chat_room_message_data(**kwargs) -> Dict[AnyStr, Any]:
+def get_chat_room_messages(**kwargs) -> List[Dict[AnyStr, Any]]:
     # Check if the input dictionary has all the necessary keys.
     try:
         cassandra_connection = kwargs["cassandra_connection"]
@@ -204,6 +214,11 @@ def get_chat_room_message_data(**kwargs) -> Dict[AnyStr, Any]:
         raise Exception(error)
     try:
         cql_arguments = kwargs["cql_arguments"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        messages_ids = cql_arguments["messages_ids"]
     except KeyError as error:
         logger.error(error)
         raise Exception(error)
@@ -239,41 +254,55 @@ def get_chat_room_message_data(**kwargs) -> Dict[AnyStr, Any]:
     limit 1;
     """
 
-    # Execute the CQL query dynamically, in a convenient and safe way.
-    try:
-        chat_room_message_data = cassandra_connection.execute(cql_statement, cql_arguments).one()
-    except Exception as error:
-        logger.error(error)
-        raise Exception(error)
+    # Define the empty list to store information about messages.
+    chat_room_messages = []
 
-    # Return data of the last chat room message.
-    return chat_room_message_data
+    # Get information of each message individually.
+    for message_id in messages_ids:
+        # Add or update the value of the argument.
+        cql_arguments["message_id"] = uuid.UUID(message_id)
+
+        # Execute the CQL query dynamically, in a convenient and safe way.
+        try:
+            chat_room_message = cassandra_connection.execute(cql_statement, cql_arguments).one()
+        except Exception as error:
+            logger.error(error)
+            raise Exception(error)
+
+        # Add the message information to the list
+        chat_room_messages.append(chat_room_message)
+
+    # Return the list of chat room messages.
+    return chat_room_messages
 
 
-def analyze_and_format_chat_room_message_data(**kwargs) -> Dict[AnyStr, Any]:
+def analyze_and_format_chat_room_messages(**kwargs) -> List[Dict[AnyStr, Any]]:
     # Check if the input dictionary has all the necessary keys.
     try:
-        chat_room_message_data = kwargs["chat_room_message_data"]
+        chat_room_messages = kwargs["chat_room_messages"]
     except KeyError as error:
         logger.error(error)
         raise Exception(error)
 
     # Format the last message data.
-    chat_room_message = {}
-    quoted_message = {}
-    for key, value in chat_room_message_data.items():
-        if key.endswith("_date_time") and value is not None:
-            value = value.isoformat()
-        elif key.endswith("_id") and value is not None:
-            value = str(value)
-        if key.startswith("quoted_"):
-            quoted_message[utils.camel_case(key.replace("quoted_", ""))] = value
-        else:
-            chat_room_message[utils.camel_case(key)] = value
-    chat_room_message["quotedMessage"] = quoted_message
+    messages = []
+    for chat_room_message in chat_room_messages:
+        message = {}
+        quoted_message = {}
+        for key, value in chat_room_message.items():
+            if key.endswith("_date_time") and value is not None:
+                value = value.isoformat()
+            elif key.endswith("_id") and value is not None:
+                value = str(value)
+            if key.startswith("quoted_"):
+                quoted_message[utils.camel_case(key.replace("quoted_", ""))] = value
+            else:
+                message[utils.camel_case(key)] = value
+        message["quotedMessage"] = quoted_message
+        messages.append(message)
 
-    # Return analyzed and formatted chat room message data.
-    return chat_room_message
+    # Return analyzed and formatted messages.
+    return messages
 
 
 def lambda_handler(event, context):
@@ -298,7 +327,7 @@ def lambda_handler(event, context):
     # Define the input arguments of the AWS Lambda function.
     input_arguments = results_of_tasks["input_arguments"]
     chat_room_id = uuid.UUID(input_arguments["chat_room_id"])
-    message_id = uuid.UUID(input_arguments["message_id"])
+    messages_ids = input_arguments["messages_ids"]
     # Available values: "message_is_delivered", "message_is_read", "message_is_sent".
     message_status = input_arguments['message_status']
 
@@ -306,27 +335,27 @@ def lambda_handler(event, context):
     cassandra_connection = results_of_tasks["cassandra_connection"]
     set_cassandra_keyspace(cassandra_connection=cassandra_connection)
 
-    # Update chat room message status.
-    update_chat_room_message_status(
+    # Update the statuses of different messages.
+    update_chat_room_messages_statuses(
         cassandra_connection=cassandra_connection,
         cql_arguments={
             "column_name": message_status,
             "chat_room_id": chat_room_id,
-            "message_id": message_id
+            "messages_ids": messages_ids
         }
     )
 
-    # Define the variable that stores information about the last chat room message data.
-    chat_room_message_data = get_chat_room_message_data(
+    # Define the variable that stores information about messages.
+    chat_room_messages = get_chat_room_messages(
         cassandra_connection=cassandra_connection,
         cql_arguments={
             "chat_room_id": chat_room_id,
-            "message_id": message_id
+            "messages_ids": messages_ids
         }
     )
 
-    # Define variables that stores formatted information about the chat room message.
-    chat_room_message = analyze_and_format_chat_room_message_data(chat_room_message_data=chat_room_message_data)
+    # Define variables that stores formatted information about messages.
+    messages = analyze_and_format_chat_room_messages(chat_room_messages=chat_room_messages)
 
-    # Return data of the chat room message.
-    return chat_room_message
+    # Return the list of messages.
+    return messages
