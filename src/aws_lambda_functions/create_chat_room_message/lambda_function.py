@@ -718,11 +718,11 @@ def analyze_and_format_chat_room_message_data(**kwargs) -> Dict[AnyStr, Any]:
     chat_room_message = {}
     quoted_message = {}
     for key, value in chat_room_message_data.items():
-        if key.endswith["_date_time"] and value is not None:
+        if key.endswith("_date_time") and value is not None:
             value = value.isoformat()
-        elif key.endswith["_id"] and value is not None:
+        elif key.endswith("_id") and value is not None:
             value = str(value)
-        if key.startswith["quoted_"]:
+        if key.startswith("quoted_"):
             quoted_message[utils.camel_case(key.replace("quoted_", ""))] = value
         else:
             chat_room_message[utils.camel_case(key)] = value
