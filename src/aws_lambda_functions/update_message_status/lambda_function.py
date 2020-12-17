@@ -182,7 +182,7 @@ def update_chat_room_message_status(**kwargs) -> None:
     and
         message_id = %(message_id)s
     if exists;
-    """.format(column_name)
+    """.format(column_name.lower())
 
     # Execute the CQL query dynamically, in a convenient and safe way.
     try:
