@@ -466,12 +466,12 @@ def update_last_message_content_data(**kwargs) -> None:
         logger.error(error)
         raise Exception(error)
     try:
-        chat_room_status = kwargs["chat_room_status"]
+        chat_room_status = cql_arguments["chat_room_status"]
     except KeyError as error:
         logger.error(error)
         raise Exception(error)
     try:
-        increase_unread_messages_number = kwargs["increase_unread_messages_number"]
+        increase_unread_messages_number = cql_arguments["increase_unread_messages_number"]
     except KeyError as error:
         logger.error(error)
         raise Exception(error)
