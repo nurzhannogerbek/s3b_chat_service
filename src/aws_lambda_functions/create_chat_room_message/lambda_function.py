@@ -513,6 +513,10 @@ def update_last_message_content_data(**kwargs) -> None:
                 logger.error(error)
                 raise Exception(error)
 
+            # Check the data type of the variable.
+            if isinstance(unread_messages_number, type(None)):
+                unread_messages_number = 0
+
             # Increase the number of unread messages.
             unread_messages_number += 1
 
@@ -590,6 +594,10 @@ def update_last_message_content_data(**kwargs) -> None:
             except Exception as error:
                 logger.error(error)
                 raise Exception(error)
+
+            # Check the data type of the variable.
+            if isinstance(unread_messages_number, type(None)):
+                unread_messages_number = 0
 
             # Increase the number of unread messages.
             unread_messages_number += 1
