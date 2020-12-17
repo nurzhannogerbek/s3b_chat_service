@@ -165,19 +165,24 @@ def update_chat_room_message_status(**kwargs) -> None:
     except KeyError as error:
         logger.error(error)
         raise Exception(error)
+    try:
+        column_name = cql_arguments["column_name"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
 
     # Prepare the CQL query that updates the status of the message.
     cql_statement = """
     update
         chat_rooms_messages
     set
-        %(column_name)s = true
+        {0} = true
     where
         chat_room_id = %(chat_room_id)s
     and
         message_id = %(message_id)s
     if exists;
-    """
+    """.format(column_name)
 
     # Execute the CQL query dynamically, in a convenient and safe way.
     try:
