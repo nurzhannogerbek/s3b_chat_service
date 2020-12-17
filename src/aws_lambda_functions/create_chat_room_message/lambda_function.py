@@ -769,7 +769,10 @@ def lambda_handler(event, context):
 
     # Define a few necessary variables that will be used in the future.
     channel_id = aggregated_data["channel_id"]
-    operator_id = aggregated_data["operator_id"]
+    if aggregated_data["operator_id"]:
+        operator_id = uuid.UUID(aggregated_data["operator_id"])
+    else:
+        operator_id = None
     organizations_ids = aggregated_data["organizations_ids"]
     message_id = uuid.uuid1()
     chat_room_id = uuid.UUID(input_arguments["chat_room_id"])
@@ -829,7 +832,7 @@ def lambda_handler(event, context):
                     "increase_unread_messages_number": increase_unread_messages_number,
                     "organizations_ids": organizations_ids,
                     "chat_room_id": chat_room_id,
-                    "operator_id": uuid.UUID(operator_id),
+                    "operator_id": operator_id,
                     "channel_id": uuid.UUID(channel_id),
                     "last_message_content": last_message_content
                 }
