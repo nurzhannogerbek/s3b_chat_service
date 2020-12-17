@@ -685,7 +685,7 @@ def get_chat_room_message_data(**kwargs) -> Dict[AnyStr, Any]:
         quoted_message_content_url,
         quoted_message_id,
         quoted_message_text,
-        quoted_message_type,
+        quoted_message_type
     from
         chat_rooms_messages
     where
