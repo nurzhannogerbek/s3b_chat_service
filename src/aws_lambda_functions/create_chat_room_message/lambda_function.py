@@ -93,7 +93,7 @@ def check_input_arguments(**kwargs) -> None:
 
     # Check the format and values of required arguments.
     chat_room_id = input_arguments.get("chatRoomId", None)
-    if chat_room_id:
+    if chat_room_id is not None:
         try:
             uuid.UUID(chat_room_id)
         except ValueError:
@@ -101,7 +101,7 @@ def check_input_arguments(**kwargs) -> None:
     else:
         raise Exception("The 'chatRoomId' argument can't be None/Null/Undefined.")
     message_author_id = input_arguments.get("messageAuthorId", None)
-    if message_author_id:
+    if message_author_id is not None:
         try:
             uuid.UUID(message_author_id)
         except ValueError:
@@ -109,7 +109,7 @@ def check_input_arguments(**kwargs) -> None:
     else:
         raise Exception("The 'messageAuthorId' argument can't be None/Null/Undefined.")
     message_channel_id = input_arguments.get("messageChannelId", None)
-    if message_channel_id:
+    if message_channel_id is not None:
         try:
             uuid.UUID(message_channel_id)
         except ValueError:
@@ -117,7 +117,7 @@ def check_input_arguments(**kwargs) -> None:
     else:
         raise Exception("The 'messageChannelId' argument can't be None/Null/Undefined.")
     message_type = input_arguments.get("messageType", None)
-    if not message_type:
+    if message_type is None:
         raise Exception("The 'messageType' argument can't be None/Null/Undefined.")
     message_text = input_arguments.get("messageText", None)
     message_content_url = input_arguments.get("messageContentUrl", None)
@@ -125,7 +125,7 @@ def check_input_arguments(**kwargs) -> None:
         quoted_message_id = input_arguments["quotedMessage"]["messageId"]
     except KeyError:
         quoted_message_id = None
-    if not quoted_message_id:
+    if quoted_message_id is not None:
         try:
             uuid.UUID(quoted_message_id)
         except ValueError:
@@ -134,7 +134,7 @@ def check_input_arguments(**kwargs) -> None:
         quoted_message_author_id = input_arguments["quotedMessage"]["messageAuthorId"]
     except KeyError:
         quoted_message_author_id = None
-    if not quoted_message_author_id:
+    if quoted_message_author_id is not None:
         try:
             uuid.UUID(quoted_message_author_id)
         except ValueError:
@@ -143,7 +143,7 @@ def check_input_arguments(**kwargs) -> None:
         quoted_message_channel_id = input_arguments["quotedMessage"]["messageChannelId"]
     except KeyError:
         quoted_message_channel_id = None
-    if not quoted_message_channel_id:
+    if quoted_message_channel_id is not None:
         try:
             uuid.UUID(quoted_message_channel_id)
         except ValueError:
@@ -162,7 +162,7 @@ def check_input_arguments(**kwargs) -> None:
         quoted_message_content_url = None
     local_message_id = input_arguments.get("localMessageId", None)
     increase_unread_messages_number = input_arguments.get("increaseUnreadMessagesNumber", None)
-    if not increase_unread_messages_number:
+    if increase_unread_messages_number is None:
         raise Exception("The 'increaseUnreadMessagesNumber' argument can't be None/Null/Undefined.")
 
     # Put the result of the function in the queue.
