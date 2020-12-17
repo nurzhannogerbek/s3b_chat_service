@@ -326,7 +326,7 @@ def lambda_handler(event, context):
 
     # Define the input arguments of the AWS Lambda function.
     input_arguments = results_of_tasks["input_arguments"]
-    chat_room_id = uuid.UUID(input_arguments["chat_room_id"])
+    chat_room_id = input_arguments["chat_room_id"]
     messages_ids = input_arguments["messages_ids"]
     # Available values: "message_is_delivered", "message_is_read", "message_is_sent".
     message_status = input_arguments['message_status']
@@ -340,7 +340,7 @@ def lambda_handler(event, context):
         cassandra_connection=cassandra_connection,
         cql_arguments={
             "column_name": message_status,
-            "chat_room_id": chat_room_id,
+            "chat_room_id": uuid.UUID(chat_room_id),
             "messages_ids": messages_ids
         }
     )
@@ -349,7 +349,7 @@ def lambda_handler(event, context):
     chat_room_messages = get_chat_room_messages(
         cassandra_connection=cassandra_connection,
         cql_arguments={
-            "chat_room_id": chat_room_id,
+            "chat_room_id": uuid.UUID(chat_room_id),
             "messages_ids": messages_ids
         }
     )
