@@ -355,7 +355,10 @@ def lambda_handler(event, context):
     )
 
     # Define variables that stores formatted information about messages.
-    messages = analyze_and_format_chat_room_messages(chat_room_messages=chat_room_messages)
+    chat_room_messages = analyze_and_format_chat_room_messages(chat_room_messages=chat_room_messages)
 
-    # Return the list of messages.
-    return messages
+    # Create the response structure and return it.
+    return {
+        "chatRoomId": chat_room_id,
+        "chatRoomMessages": chat_room_messages
+    }
