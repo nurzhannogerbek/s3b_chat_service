@@ -505,7 +505,10 @@ def update_last_message_content_data(**kwargs) -> None:
 
             # Execute the CQL query dynamically, in a convenient and safe way.
             try:
-                unread_messages_number = cassandra_connection.execute(cql_statement, cql_arguments).one()
+                unread_messages_number = cassandra_connection.execute(
+                    cql_statement,
+                    cql_arguments
+                ).one()["unread_messages_number"]
             except Exception as error:
                 logger.error(error)
                 raise Exception(error)
@@ -580,7 +583,10 @@ def update_last_message_content_data(**kwargs) -> None:
 
             # Execute the CQL query dynamically, in a convenient and safe way.
             try:
-                unread_messages_number = cassandra_connection.execute(cql_statement, cql_arguments).one()
+                unread_messages_number = cassandra_connection.execute(
+                    cql_statement,
+                    cql_arguments
+                ).one()["unread_messages_number"]
             except Exception as error:
                 logger.error(error)
                 raise Exception(error)
