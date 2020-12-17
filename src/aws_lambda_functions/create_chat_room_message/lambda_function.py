@@ -609,7 +609,7 @@ def update_last_message_content_data(**kwargs) -> None:
             # Prepare a request to update the contents of the last message.
             cql_statement = """
             update
-                non_accepted_chat_rooms
+                accepted_chat_rooms
             set
                 last_message_content = %(last_message_content)s,
                 last_message_date_time = toTimestamp(now()),
@@ -626,7 +626,7 @@ def update_last_message_content_data(**kwargs) -> None:
             # Prepare a request to update the contents of the last message.
             cql_statement = """
             update
-                non_accepted_chat_rooms
+                accepted_chat_rooms
             set
                 last_message_content = %(last_message_content)s,
                 last_message_date_time = toTimestamp(now()),
