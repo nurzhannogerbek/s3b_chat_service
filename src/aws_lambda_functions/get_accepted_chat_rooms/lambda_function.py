@@ -106,7 +106,7 @@ def check_input_arguments(**kwargs) -> None:
             try:
                 datetime.fromisoformat(argument_value)
             except ValueError:
-                raise Exception("The '%s' argument format is not correct.".format(utils.camel_case(argument_name)))
+                raise Exception("The '%s' argument format is not ISO.".format(utils.camel_case(argument_name)))
 
     # Put the result of the function in the queue.
     queue.put({
