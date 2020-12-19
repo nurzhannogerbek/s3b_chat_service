@@ -546,8 +546,7 @@ def update_last_message_content_data(**kwargs) -> None:
                 non_accepted_chat_rooms
             set
                 last_message_content = %(last_message_content)s,
-                last_message_date_time = toTimestamp(now()),
-                unread_messages_number = 0
+                last_message_date_time = toTimestamp(now())
             where
                 organization_id = %(organization_id)s
             and
@@ -629,8 +628,7 @@ def update_last_message_content_data(**kwargs) -> None:
                 accepted_chat_rooms
             set
                 last_message_content = %(last_message_content)s,
-                last_message_date_time = toTimestamp(now()),
-                unread_messages_number = 0
+                last_message_date_time = toTimestamp(now())
             where
                 operator_id = %(operator_id)s
             and

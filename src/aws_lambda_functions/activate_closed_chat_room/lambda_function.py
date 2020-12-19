@@ -583,8 +583,7 @@ def analyze_and_format_client_data(**kwargs) -> None:
     # Format the client data.
     client = {}
     if client_data:
-        gender = {}
-        country = {}
+        gender, country = {}, {}
         for key, value in client_data.items():
             if key.startswith("gender_"):
                 gender[utils.camel_case(key)] = value
