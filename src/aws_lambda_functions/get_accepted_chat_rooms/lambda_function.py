@@ -95,8 +95,6 @@ def check_input_arguments(**kwargs) -> None:
     # Check the format and values of required arguments in the list of input arguments.
     required_arguments = ["operatorId", "channelsIds"]
     for argument_name, argument_value in input_arguments.items():
-        if argument_name not in required_arguments:
-            raise Exception("The '%s' argument doesn't exist.".format(utils.camel_case(argument_name)))
         if argument_name in required_arguments and argument_value is None:
             raise Exception("The '%s' argument can't be None/Null/Undefined.".format(utils.camel_case(argument_name)))
         if argument_name.endswith("Id"):
@@ -104,6 +102,11 @@ def check_input_arguments(**kwargs) -> None:
                 uuid.UUID(argument_value)
             except ValueError:
                 raise Exception("The '%s' argument format is not UUID.".format(utils.camel_case(argument_name)))
+        elif argument_name.endswith("DateTime"):
+            try:
+                datetime.fromisoformat(argument_value)
+            except ValueError:
+                raise Exception("The '%s' argument format is not correct.".format(utils.camel_case(argument_name)))
 
     # Put the result of the function in the queue.
     queue.put({
