@@ -392,7 +392,7 @@ def get_clients_data(**kwargs) -> None:
     left join countries on
         identified_users.country_id = countries.country_id
     where
-        users.user_id in (%(clients_ids)s);
+        users.user_id in %(clients_ids)s;
     """
 
     # Execute the SQL query dynamically, in a convenient and safe way.
@@ -443,7 +443,7 @@ def get_channels_data(**kwargs) -> None:
     left join channel_types on
         channels.channel_type_id = channel_types.channel_type_id
     where
-        channels.channel_id in (%(channels_ids)s);
+        channels.channel_id in %(channels_ids)s;
     """
 
     # Execute the SQL query dynamically, in a convenient and safe way.
