@@ -219,16 +219,6 @@ def get_completed_chat_rooms_data(**kwargs) -> List[Dict[AnyStr, Any]]:
         logger.error(error)
         raise Exception(error)
     try:
-        fetch_size = cql_arguments["fetch_size"]
-    except KeyError as error:
-        logger.error(error)
-        raise Exception(error)
-    try:
-        paging_state = cql_arguments["paging_state"]
-    except KeyError as error:
-        logger.error(error)
-        raise Exception(error)
-    try:
         start_date_time = cql_arguments["start_date_time"]
     except KeyError as error:
         logger.error(error)
@@ -277,9 +267,6 @@ def get_completed_chat_rooms_data(**kwargs) -> List[Dict[AnyStr, Any]]:
             channel_id = %(channel_id)s;
         """
 
-    # Prepare the SQL statement.
-    cql_statement = SimpleStatement(cql_statement, fetch_size=fetch_size)
-
     # Define the empty list to store information about completed chat rooms from all channels.
     completed_chat_rooms_data = []
 
@@ -290,10 +277,7 @@ def get_completed_chat_rooms_data(**kwargs) -> List[Dict[AnyStr, Any]]:
 
         # Execute the CQL query dynamically, in a convenient and safe way.
         try:
-            if paging_state:
-                completed_chat_rooms = cassandra_connection.execute(cql_statement, paging_state=unhexlify(paging_state))
-            else:
-                completed_chat_rooms = cassandra_connection.execute(cql_statement)
+            completed_chat_rooms = cassandra_connection.execute(cql_statement, cql_arguments)
         except Exception as error:
             logger.error(error)
             raise Exception(error)
@@ -615,8 +599,6 @@ def lambda_handler(event, context):
     input_arguments = results_of_tasks["input_arguments"]
     operator_id = uuid.UUID(input_arguments["operator_id"])
     channels_ids = input_arguments["channels_ids"]
-    fetch_size = input_arguments["fetch_size"]
-    paging_state = input_arguments["paging_state"]
     start_date_time = input_arguments["start_date_time"]
     start_date_time = datetime.fromisoformat(start_date_time) if start_date_time else None
     end_date_time = input_arguments["end_date_time"]
@@ -633,8 +615,6 @@ def lambda_handler(event, context):
         cql_arguments={
             "operator_id": operator_id,
             "channels_ids": channels_ids,
-            "fetch_size": fetch_size,
-            "paging_state": paging_state,
             "start_date_time": start_date_time,
             "end_date_time": end_date_time,
         }
