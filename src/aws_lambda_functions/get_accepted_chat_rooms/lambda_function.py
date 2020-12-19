@@ -592,7 +592,9 @@ def lambda_handler(event, context):
     operator_id = input_arguments["operator_id"]
     channels_ids = input_arguments["channels_ids"]
     start_date_time = input_arguments["start_date_time"]
+    start_date_time = datetime.fromisoformat(start_date_time) if start_date_time else None
     end_date_time = input_arguments["end_date_time"]
+    end_date_time = datetime.fromisoformat(end_date_time) if end_date_time else None
 
     # Define the instances of the database connections.
     postgresql_connection = results_of_tasks["postgresql_connection"]
@@ -605,8 +607,8 @@ def lambda_handler(event, context):
         cql_arguments={
             "operator_id": uuid.UUID(operator_id),
             "channels_ids": channels_ids,
-            "start_date_time": datetime.fromisoformat(start_date_time),
-            "end_date_time": datetime.fromisoformat(end_date_time),
+            "start_date_time": start_date_time,
+            "end_date_time": end_date_time,
         }
     )
 
