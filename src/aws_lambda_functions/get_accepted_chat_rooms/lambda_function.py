@@ -552,6 +552,8 @@ def analyze_and_format_accepted_chat_rooms_data(**kwargs) -> List[Dict[AnyStr, A
         for key, value in accepted_chat_room_data.items():
             if key.endswith("_date_time") and value is not None:
                 value = value.isoformat()
+            elif key.endswith("_id") and value is not None:
+                value = str(value)
             if key.startswith("client_id"):
                 accepted_chat_room["client"] = clients_storage[value]
             elif key.startswith("channel_id"):
@@ -615,7 +617,7 @@ def lambda_handler(event, context):
     # Check for data in the list that we received from the database.
     if accepted_chat_rooms_data:
         # Create the list of IDs for all clients.
-        clients_ids = [item["client_id"] for item in accepted_chat_rooms_data]
+        clients_ids = [str(item["client_id"]) for item in accepted_chat_rooms_data]
 
         # Run several functions in parallel to get all the necessary data from different database tables.
         results_of_tasks = run_multithreading_tasks([
@@ -624,7 +626,7 @@ def lambda_handler(event, context):
                 "function_arguments": {
                     "postgresql_connection": postgresql_connection,
                     "sql_arguments": {
-                        "clients_ids": clients_ids
+                        "clients_ids": tuple(clients_ids)
                     }
                 }
             },
@@ -633,7 +635,7 @@ def lambda_handler(event, context):
                 "function_arguments": {
                     "postgresql_connection": postgresql_connection,
                     "sql_arguments": {
-                        "channels_ids": channels_ids
+                        "channels_ids": tuple(channels_ids)
                     }
                 }
             }
