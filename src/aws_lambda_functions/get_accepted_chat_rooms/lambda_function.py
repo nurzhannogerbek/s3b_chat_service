@@ -280,6 +280,7 @@ def get_accepted_chat_rooms_data(**kwargs) -> List[Dict[AnyStr, Any]]:
             logger.error(error)
             raise Exception(error)
 
+        # Add the results to the general list.
         accepted_chat_rooms_data.extend(accepted_chat_rooms)
 
     # Return the list of accepted chat rooms from all channels.
@@ -594,7 +595,7 @@ def lambda_handler(event, context):
 
     # Define the input arguments of the AWS Lambda function.
     input_arguments = results_of_tasks["input_arguments"]
-    operator_id = input_arguments["operator_id"]
+    operator_id = uuid.UUID(input_arguments["operator_id"])
     channels_ids = input_arguments["channels_ids"]
     start_date_time = input_arguments["start_date_time"]
     start_date_time = datetime.fromisoformat(start_date_time) if start_date_time else None
@@ -610,7 +611,7 @@ def lambda_handler(event, context):
     accepted_chat_rooms_data = get_accepted_chat_rooms_data(
         cassandra_connection=cassandra_connection,
         cql_arguments={
-            "operator_id": uuid.UUID(operator_id),
+            "operator_id": operator_id,
             "channels_ids": channels_ids,
             "start_date_time": start_date_time,
             "end_date_time": end_date_time,
