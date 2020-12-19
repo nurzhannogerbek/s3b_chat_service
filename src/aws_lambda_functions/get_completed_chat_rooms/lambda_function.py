@@ -1,7 +1,5 @@
 import logging
 import os
-from binascii import unhexlify
-from cassandra.query import SimpleStatement
 from psycopg2.extras import RealDictCursor
 from cassandra.cluster import Session
 from functools import wraps
