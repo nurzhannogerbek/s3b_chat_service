@@ -76,7 +76,7 @@ def run_multithreading_tasks(functions: List[Dict[AnyStr, Union[Callable, Dict[A
 def check_input_arguments(**kwargs) -> None:
     # Make sure that all the necessary arguments for the AWS Lambda function are present.
     try:
-        input_arguments = kwargs["event"]["arguments"]["input"]
+        input_arguments = kwargs["event"]["arguments"]
     except KeyError as error:
         logger.error(error)
         raise Exception(error)
