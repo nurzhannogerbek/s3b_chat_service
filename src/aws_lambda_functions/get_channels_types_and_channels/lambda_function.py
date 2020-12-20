@@ -75,7 +75,7 @@ def run_multithreading_tasks(functions: List[Dict[AnyStr, Union[Callable, Dict[A
 def check_input_arguments(**kwargs) -> None:
     # Make sure that all the necessary arguments for the AWS Lambda function are present.
     try:
-        input_arguments = kwargs["event"]["arguments"]["input"]
+        input_arguments = kwargs["event"]["arguments"]
     except KeyError as error:
         logger.error(error)
         raise Exception(error)
@@ -213,10 +213,16 @@ def analyze_and_format_channels_types_and_channels_data(**kwargs) -> List[Dict[A
         channels_types_and_channels = []
 
         # Pre-sort the data to group it later.
-        data = sorted(channels_types_and_channels_data, key=lambda x: x['channel_type_id'])
+        channels_types_and_channels_data = sorted(
+            channels_types_and_channels_data,
+            key=lambda x: x['channel_type_id']
+        )
 
         # The "groupby" function makes grouping objects in an iterable a snap.
-        grouped_data = groupby(deepcopy(data), key=lambda x: x['channel_type_id'])
+        grouped_data = groupby(
+            deepcopy(channels_types_and_channels_data),
+            key=lambda x: x['channel_type_id']
+        )
 
         # Define a list of keys that will be deleted later.
         keys_to_delete = ["channel_type_id", "channel_type_name", "channel_type_description"]
@@ -225,26 +231,26 @@ def analyze_and_format_channels_types_and_channels_data(**kwargs) -> List[Dict[A
         storage = {}
 
         # Clean the dictionaries of certain keys and convert the key names in the dictionaries.
-        for key, value in grouped_data:
+        for argument, records in grouped_data:
             cleaned_data = []
-            for record in list(value):
+            for record in list(records):
                 cleaned_record = {}
                 [record.pop(item) for item in keys_to_delete]
-                for record_key, record_value in record.items():
-                    cleaned_record[utils.camel_case(record_key)] = record_value
+                for key, value in record.items():
+                    cleaned_record[utils.camel_case(key)] = value
                 cleaned_data.append(cleaned_record)
-            storage[key] = cleaned_data
+            storage[argument] = cleaned_data
 
         # Format the channels types and channels data.
         channels_types_ids = []
-        for entry in channels_types_and_channels_data:
+        for record in channels_types_and_channels_data:
             channel_type_and_channel = {}
-            if entry['channel_type_id'] not in channels_types_ids:
-                channels_types_ids.append(entry['channel_type_id'])
-                for key, value in entry.items():
-                    if key in deleted_keys:
+            if record['channel_type_id'] not in channels_types_ids:
+                channels_types_ids.append(record['channel_type_id'])
+                for key, value in record.items():
+                    if key in keys_to_delete:
                         channel_type_and_channel[utils.camel_case(key)] = value
-                    channel_type_and_channel["channels"] = storage[entry["channel_type_id"]]
+                    channel_type_and_channel["channels"] = storage[record["channel_type_id"]]
                 channels_types_and_channels.append(channel_type_and_channel)
     else:
         # Define the empty list.
