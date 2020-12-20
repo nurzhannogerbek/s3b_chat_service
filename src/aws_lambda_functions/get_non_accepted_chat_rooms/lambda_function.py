@@ -668,6 +668,13 @@ def lambda_handler(event, context):
         clients_storage = results_of_tasks["clients_storage"]
         channels_storage = results_of_tasks["channels_storage"]
 
+        # Sort the data by the date of the last message.
+        non_accepted_chat_rooms_data = sorted(
+            non_accepted_chat_rooms_data,
+            key=lambda x: x["last_message_date_time"],
+            reverse=True
+        )
+
         # Define the variable that stores information about all non accepted chat rooms from different channels.
         non_accepted_chat_rooms = analyze_and_format_non_accepted_chat_rooms_data(
             non_accepted_chat_rooms_data=non_accepted_chat_rooms_data,

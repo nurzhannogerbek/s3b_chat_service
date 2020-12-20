@@ -668,6 +668,13 @@ def lambda_handler(event, context):
         clients_storage = results_of_tasks["clients_storage"]
         channels_storage = results_of_tasks["channels_storage"]
 
+        # Sort the data by the date of the last message.
+        completed_chat_rooms_data = sorted(
+            completed_chat_rooms_data,
+            key=lambda x: x["last_message_date_time"],
+            reverse=True
+        )
+
         # Define the variable that stores information about all completed chat rooms from different channels.
         completed_chat_rooms = analyze_and_format_completed_chat_rooms_data(
             completed_chat_rooms_data=completed_chat_rooms_data,
