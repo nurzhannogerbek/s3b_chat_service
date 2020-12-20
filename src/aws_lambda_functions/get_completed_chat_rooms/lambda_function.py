@@ -102,7 +102,7 @@ def check_input_arguments(**kwargs) -> None:
                 uuid.UUID(argument_value)
             except ValueError:
                 raise Exception("The '%s' argument format is not UUID.".format(utils.camel_case(argument_name)))
-        elif argument_name.endswith("DateTime"):
+        elif argument_name.endswith("DateTime") and argument_value:
             try:
                 datetime.fromisoformat(argument_value)
             except ValueError:
