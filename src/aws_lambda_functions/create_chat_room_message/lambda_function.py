@@ -161,9 +161,6 @@ def check_input_arguments(**kwargs) -> None:
     except KeyError:
         quoted_message_content_url = None
     local_message_id = input_arguments.get("localMessageId", None)
-    increase_unread_messages_number = input_arguments.get("increaseUnreadMessagesNumber", None)
-    if increase_unread_messages_number is None:
-        raise Exception("The 'increaseUnreadMessagesNumber' argument can't be None/Null/Undefined.")
 
     # Put the result of the function in the queue.
     queue.put({
@@ -180,8 +177,7 @@ def check_input_arguments(**kwargs) -> None:
             "quoted_message_type": quoted_message_type,
             "quoted_message_text": quoted_message_text,
             "quoted_message_content_url": quoted_message_content_url,
-            "local_message_id": local_message_id,
-            "increase_unread_messages_number": increase_unread_messages_number
+            "local_message_id": local_message_id
         }
     })
 
@@ -232,8 +228,7 @@ def set_cassandra_keyspace(cassandra_connection: Session) -> None:
         try:
             cassandra_connection.set_keyspace(CASSANDRA_KEYSPACE_NAME)
             successful_operation = True
-        except Exception as warning:
-            logger.warning(warning)
+        except Exception as error:
             try:
                 cassandra_connection = databases.create_cassandra_connection(
                     CASSANDRA_USERNAME,
@@ -471,11 +466,6 @@ def update_last_message_content_data(**kwargs) -> None:
         logger.error(error)
         raise Exception(error)
     try:
-        increase_unread_messages_number = cql_arguments["increase_unread_messages_number"]
-    except KeyError as error:
-        logger.error(error)
-        raise Exception(error)
-    try:
         organizations_ids = cql_arguments["organizations_ids"]
     except KeyError as error:
         logger.error(error)
@@ -483,78 +473,21 @@ def update_last_message_content_data(**kwargs) -> None:
 
     # Check the status value of the chat room.
     if chat_room_status == "non_accepted":
-        # Check whether you need to increase the counter of unread messages.
-        if increase_unread_messages_number:
-            # Prepare a request to get the number of unread messages.
-            cql_statement = """
-            select
-                unread_messages_number
-            from
-                non_accepted_chat_rooms
-            where
-                organization_id = %(organization_id)s
-            and
-                channel_id = %(channel_id)s
-            and
-                chat_room_id = %(chat_room_id)s
-            limit 1;
-            """
-
-            # Add or update the organization id value inside the dictionary of cql arguments.
-            cql_arguments["organization_id"] = uuid.UUID(organizations_ids[0])
-
-            # Execute the CQL query dynamically, in a convenient and safe way.
-            try:
-                unread_messages_number = cassandra_connection.execute(
-                    cql_statement,
-                    cql_arguments
-                ).one()["unread_messages_number"]
-            except Exception as error:
-                logger.error(error)
-                raise Exception(error)
-
-            # Check the data type of the variable.
-            if isinstance(unread_messages_number, type(None)):
-                unread_messages_number = 0
-
-            # Increase the number of unread messages.
-            unread_messages_number += 1
-
-            # Add the value of the number of unread messages to the CQL argument dictionary.
-            cql_arguments["unread_messages_number"] = unread_messages_number
-
-            # Prepare a request to update the contents of the last message.
-            cql_statement = """
-            update
-                non_accepted_chat_rooms
-            set
-                last_message_content = %(last_message_content)s,
-                last_message_date_time = toTimestamp(now()),
-                unread_messages_number = %(unread_messages_number)s
-            where
-                organization_id = %(organization_id)s
-            and
-                channel_id = %(channel_id)s
-            and
-                chat_room_id = %(chat_room_id)s
-            if exists;
-            """
-        else:
-            # Prepare a request to update the contents of the last message.
-            cql_statement = """
-            update
-                non_accepted_chat_rooms
-            set
-                last_message_content = %(last_message_content)s,
-                last_message_date_time = toTimestamp(now())
-            where
-                organization_id = %(organization_id)s
-            and
-                channel_id = %(channel_id)s
-            and
-                chat_room_id = %(chat_room_id)s
-            if exists;
-            """
+        # Prepare a request to update the contents of the last message.
+        cql_statement = """
+        update
+            non_accepted_chat_rooms
+        set
+            last_message_content = %(last_message_content)s,
+            last_message_date_time = toTimestamp(now())
+        where
+            organization_id = %(organization_id)s
+        and
+            channel_id = %(channel_id)s
+        and
+            chat_room_id = %(chat_room_id)s
+        if exists;
+        """
 
         # For each organization that can serve the chat room, we create an entry in the database.
         for organization_id in organizations_ids:
@@ -568,75 +501,21 @@ def update_last_message_content_data(**kwargs) -> None:
                 logger.error(error)
                 raise Exception(error)
     elif chat_room_status == "accepted":
-        # Check whether you need to increase the counter of unread messages.
-        if increase_unread_messages_number:
-            # Prepare a request to get the number of unread messages.
-            cql_statement = """
-            select
-                unread_messages_number
-            from
-                accepted_chat_rooms
-            where
-                operator_id = %(operator_id)s
-            and
-                channel_id = %(channel_id)s
-            and
-                chat_room_id = %(chat_room_id)s
-            limit 1;
-            """
-
-            # Execute the CQL query dynamically, in a convenient and safe way.
-            try:
-                unread_messages_number = cassandra_connection.execute(
-                    cql_statement,
-                    cql_arguments
-                ).one()["unread_messages_number"]
-            except Exception as error:
-                logger.error(error)
-                raise Exception(error)
-
-            # Check the data type of the variable.
-            if isinstance(unread_messages_number, type(None)):
-                unread_messages_number = 0
-
-            # Increase the number of unread messages.
-            unread_messages_number += 1
-
-            # Add the value of the number of unread messages to the CQL argument dictionary.
-            cql_arguments["unread_messages_number"] = unread_messages_number
-
-            # Prepare a request to update the contents of the last message.
-            cql_statement = """
-            update
-                accepted_chat_rooms
-            set
-                last_message_content = %(last_message_content)s,
-                last_message_date_time = toTimestamp(now()),
-                unread_messages_number = %(unread_messages_number)s
-            where
-                operator_id = %(operator_id)s
-            and
-                channel_id = %(channel_id)s
-            and
-                chat_room_id = %(chat_room_id)s
-            if exists;
-            """
-        else:
-            # Prepare a request to update the contents of the last message.
-            cql_statement = """
-            update
-                accepted_chat_rooms
-            set
-                last_message_content = %(last_message_content)s,
-                last_message_date_time = toTimestamp(now())
-            where
-                operator_id = %(operator_id)s
-            and
-                channel_id = %(channel_id)s
-            and
-                chat_room_id = %(chat_room_id)s
-            if exists;
-            """
+        # Prepare a request to update the contents of the last message.
+        cql_statement = """
+        update
+            accepted_chat_rooms
+        set
+            last_message_content = %(last_message_content)s,
+            last_message_date_time = toTimestamp(now())
+        where
+            operator_id = %(operator_id)s
+        and
+            channel_id = %(channel_id)s
+        and
+            chat_room_id = %(chat_room_id)s
+        if exists;
+        """
 
         # Execute the CQL query dynamically, in a convenient and safe way.
         try:
@@ -811,7 +690,6 @@ def lambda_handler(event, context):
     quoted_message_text = input_arguments["quoted_message_text"]
     quoted_message_content_url = input_arguments["quoted_message_content_url"]
     local_message_id = input_arguments["local_message_id"]
-    increase_unread_messages_number = input_arguments["increase_unread_messages_number"]
     last_message_content = message_text
 
     # Run several functions in parallel to create/update/delete all necessary data in different databases tables.
@@ -843,7 +721,6 @@ def lambda_handler(event, context):
                 "cassandra_connection": cassandra_connection,
                 "cql_arguments": {
                     "chat_room_status": chat_room_status,
-                    "increase_unread_messages_number": increase_unread_messages_number,
                     "organizations_ids": organizations_ids,
                     "chat_room_id": chat_room_id,
                     "operator_id": operator_id,

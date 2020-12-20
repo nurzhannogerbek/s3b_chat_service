@@ -161,8 +161,7 @@ def set_cassandra_keyspace(cassandra_connection: Session) -> None:
         try:
             cassandra_connection.set_keyspace(CASSANDRA_KEYSPACE_NAME)
             successful_operation = True
-        except Exception as warning:
-            logger.warning(warning)
+        except Exception as error:
             try:
                 cassandra_connection = databases.create_cassandra_connection(
                     CASSANDRA_USERNAME,
