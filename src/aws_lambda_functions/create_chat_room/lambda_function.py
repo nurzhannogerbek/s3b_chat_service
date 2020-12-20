@@ -95,8 +95,6 @@ def check_input_arguments(**kwargs) -> None:
     # Check the format and values of required arguments in the list of input arguments.
     required_arguments = ["channelTechnicalId", "channelTypeName", "clientId", "lastMessageContent"]
     for argument_name, argument_value in input_arguments.items():
-        if argument_name not in required_arguments:
-            raise Exception("The '%s' argument doesn't exist.".format(utils.camel_case(argument_name)))
         if argument_name in required_arguments and argument_value is None:
             raise Exception("The '%s' argument can't be None/Null/Undefined.".format(utils.camel_case(argument_name)))
         if argument_name == "clientId":
