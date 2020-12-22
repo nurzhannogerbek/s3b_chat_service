@@ -279,12 +279,12 @@ Outputs:
     Export:
       Name:
         'Fn::Sub': '${AWS::StackName}:${EnvironmentName}ActivateClosedChatRoomARN'
-  UpdateMessageStatusARN:
+  UpdateMessageDataARN:
     Value:
-      'Fn::GetAtt': UpdateMessageStatus.Arn
+      'Fn::GetAtt': UpdateMessageData.Arn
     Export:
       Name:
-        'Fn::Sub': '${AWS::StackName}:${EnvironmentName}UpdateMessageStatusARN'
+        'Fn::Sub': '${AWS::StackName}:${EnvironmentName}UpdateMessageDataARN'
   GetChannelOnlineOperatorsARN:
     Value:
       'Fn::GetAtt': GetChannelOnlineOperators.Arn
