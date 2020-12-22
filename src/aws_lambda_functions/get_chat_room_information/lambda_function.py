@@ -456,18 +456,18 @@ def analyze_and_format_aggregated_data(**kwargs) -> None:
     return None
 
 
-def analyze_and_format_client_data(**kwargs) -> None:
+def analyze_and_format_operators_data(**kwargs) -> None:
     # Check if the input dictionary has all the necessary keys.
     try:
-        client_data = kwargs["client_data"]
+        operators_data = kwargs["operators_data"]
     except KeyError as error:
         logger.error(error)
         raise Exception(error)
 
     # Format the aggregated data.
     operators = []
-    if client_data:
-        for entry in client_data:
+    if operators_data:
+        for entry in operators_data:
             operator, gender, country, role, organization = {}, {}, {}, {}, {}
             for key, value in entry.items():
                 if key.endswith("_date_time"):
@@ -493,19 +493,19 @@ def analyze_and_format_client_data(**kwargs) -> None:
     return None
 
 
-def analyze_and_format_operators_data(**kwargs) -> None:
+def analyze_and_format_client_data(**kwargs) -> None:
     # Check if the input dictionary has all the necessary keys.
     try:
-        operators_data = kwargs["operators_data"]
+        client_data = kwargs["client_data"]
     except KeyError as error:
         logger.error(error)
         raise Exception(error)
 
     # Format the aggregated data.
     client = {}
-    if operators_data:
+    if client_data:
         gender, country = {}, {}
-        for key, value in operators_data.items():
+        for key, value in client_data.items():
             if key.endswith("_date_time"):
                 value = value.isoformat()
             if key.startswith("gender_"):
