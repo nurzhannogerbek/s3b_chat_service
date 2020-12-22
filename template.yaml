@@ -176,12 +176,12 @@ Resources:
       Layers:
         - 'Fn::Sub': '${DatabasesLayerARN}'
         - 'Fn::Sub': '${UtilsLayerARN}'
-  UpdateMessageStatus:
+  UpdateMessageData:
     Type: 'AWS::Serverless::Function'
     Properties:
       FunctionName:
-        'Fn::Sub': '${EnvironmentName}UpdateMessageStatus'
-      CodeUri: src/aws_lambda_functions/update_message_status
+        'Fn::Sub': '${EnvironmentName}UpdateMessageData'
+      CodeUri: src/aws_lambda_functions/update_message_data
       Handler: lambda_function.lambda_handler
       Layers:
         - 'Fn::Sub': '${DatabasesLayerARN}'
