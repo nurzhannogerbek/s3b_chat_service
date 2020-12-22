@@ -1,39 +1,113 @@
-import databases
-import utils
 import logging
-import sys
 import os
 from psycopg2.extras import RealDictCursor
+from functools import wraps
+from typing import *
+import uuid
+from threading import Thread
+from queue import Queue
+import databases
+import utils
 
+# Configure the logging tool in the AWS Lambda function.
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.ERROR)
 
-"""
-Define the connection to the database outside of the "lambda_handler" function.
-The connection to database will be created the first time the function is called.
-Any subsequent function call will use the same database connection.
-"""
-postgresql_connection = None
-
-# Define databases settings parameters.
+# Initialize constants with parameters to configure.
 POSTGRESQL_USERNAME = os.environ["POSTGRESQL_USERNAME"]
 POSTGRESQL_PASSWORD = os.environ["POSTGRESQL_PASSWORD"]
 POSTGRESQL_HOST = os.environ["POSTGRESQL_HOST"]
 POSTGRESQL_PORT = int(os.environ["POSTGRESQL_PORT"])
 POSTGRESQL_DB_NAME = os.environ["POSTGRESQL_DB_NAME"]
 
-logger = logging.getLogger(__name__)  # Create the logger with the specified name.
-logger.setLevel(logging.WARNING)  # Set the logging level of the logger.
+# The connection to the database will be created the first time the AWS Lambda function is called.
+# Any subsequent call to the function will use the same database connection until the container stops.
+POSTGRESQL_CONNECTION = None
 
 
-def lambda_handler(event, context):
-    """
-    :argument event: The AWS Lambda uses this parameter to pass in event data to the handler.
-    :argument context: The AWS Lambda uses this parameter to provide runtime information to your handler.
-    """
-    # Since the connection with the database were defined outside of the function, we create global variables.
-    global postgresql_connection
-    if not postgresql_connection:
+def run_multithreading_tasks(functions: List[Dict[AnyStr, Union[Callable, Dict[AnyStr, Any]]]]) -> Dict[AnyStr, Any]:
+    # Create the empty list to save all parallel threads.
+    threads = []
+
+    # Create the queue to store all results of functions.
+    queue = Queue()
+
+    # Create the thread for each function.
+    for function in functions:
+        # Check whether the input arguments have keys in their dictionaries.
         try:
-            postgresql_connection = databases.create_postgresql_connection(
+            function_object = function["function_object"]
+        except KeyError as error:
+            logger.error(error)
+            raise Exception(error)
+        try:
+            function_arguments = function["function_arguments"]
+        except KeyError as error:
+            logger.error(error)
+            raise Exception(error)
+
+        # Add the instance of the queue to the list of function arguments.
+        function_arguments["queue"] = queue
+
+        # Create the thread.
+        thread = Thread(target=function_object, kwargs=function_arguments)
+        threads.append(thread)
+
+    # Start all parallel threads.
+    for thread in threads:
+        thread.start()
+
+    # Wait until all parallel threads are finished.
+    for thread in threads:
+        thread.join()
+
+    # Get the results of all threads.
+    results = {}
+    while not queue.empty():
+        results = {**results, **queue.get()}
+
+    # Return the results of all threads.
+    return results
+
+
+def check_input_arguments(**kwargs) -> None:
+    # Make sure that all the necessary arguments for the AWS Lambda function are present.
+    try:
+        input_arguments = kwargs["event"]["arguments"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        queue = kwargs["queue"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+
+    # Check the format and values of required arguments in the list of input arguments.
+    required_arguments = ["channelTechnicalId", "channelTypeName", "currentPageNumber", "recordsNumber"]
+    for argument_name, argument_value in input_arguments.items():
+        if argument_name in required_arguments and argument_value is None:
+            raise Exception("The '{0}' argument can't be None/Null/Undefined.".format(utils.camel_case(argument_name)))
+
+    # Put the result of the function in the queue.
+    queue.put({
+        "input_arguments": {
+            "channel_technical_id": input_arguments.get("channelTechnicalId", None),
+            "channel_type_name": input_arguments.get("channelTypeName", None),
+            "offset": input_arguments.get("currentPageNumber", None),
+            "limit": input_arguments.get("recordsNumber", None),
+        }
+    })
+
+    # Return nothing.
+    return None
+
+
+def reuse_or_recreate_postgresql_connection(queue: Queue) -> None:
+    global POSTGRESQL_CONNECTION
+    if not POSTGRESQL_CONNECTION:
+        try:
+            POSTGRESQL_CONNECTION = databases.create_postgresql_connection(
                 POSTGRESQL_USERNAME,
                 POSTGRESQL_PASSWORD,
                 POSTGRESQL_HOST,
@@ -42,56 +116,79 @@ def lambda_handler(event, context):
             )
         except Exception as error:
             logger.error(error)
-            sys.exit(1)
+            raise Exception("Unable to connect to the PostgreSQL database.")
+    queue.put({"postgresql_connection": POSTGRESQL_CONNECTION})
+    return None
 
-    # Define the values of the data passed to the function.
-    channel_technical_id = event["arguments"]["channelTechnicalId"]
-    channel_type_name = event["arguments"]["channelTypeName"]
-    offset = event["arguments"]["currentPageNumber"]
-    limit = event["arguments"]["recordsNumber"]
-    offset = (offset - 1) * limit
 
-    # With a dictionary cursor, the data is sent in a form of Python dictionaries.
-    cursor = postgresql_connection.cursor(cursor_factory=RealDictCursor)
+def postgresql_wrapper(function):
+    @wraps(function)
+    def wrapper(**kwargs):
+        try:
+            postgresql_connection = kwargs["postgresql_connection"]
+        except KeyError as error:
+            logger.error(error)
+            raise Exception(error)
+        cursor = postgresql_connection.cursor(cursor_factory=RealDictCursor)
+        kwargs["cursor"] = cursor
+        result = function(**kwargs)
+        cursor.close()
+        return result
+    return wrapper
 
-    # Prepare the SQL request that returns information about operators of the specific chat room.
-    statement = """
+
+@postgresql_wrapper
+def get_operators_data(**kwargs) -> List:
+    # Check if the input dictionary has all the necessary keys.
+    try:
+        cursor = kwargs["cursor"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        sql_arguments = kwargs["sql_arguments"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+
+    # Prepare the SQL query that returns the information of operators.
+    sql_statement = """
     select
-        internal_users.auth0_user_id,
+        users.user_id::text,
+        internal_users.auth0_user_id::text,
         internal_users.auth0_metadata::text,
-        users.user_id,
-        internal_users.internal_user_first_name as user_first_name,
-        internal_users.internal_user_last_name as user_last_name,
-        internal_users.internal_user_middle_name as user_middle_name,
-        internal_users.internal_user_primary_email as user_primary_email,
-        internal_users.internal_user_secondary_email as user_secondary_email,
-        internal_users.internal_user_primary_phone_number as user_primary_phone_number,
-        internal_users.internal_user_secondary_phone_number as user_secondary_phone_number,
-        internal_users.internal_user_profile_photo_url as user_profile_photo_url,
-        internal_users.internal_user_position_name as user_position_name,
-        genders.gender_id,
-        genders.gender_technical_name,
-        genders.gender_public_name,
-        countries.country_id,
-        countries.country_short_name,
-        countries.country_official_name,
-        countries.country_alpha_2_code,
-        countries.country_alpha_3_code,
-        countries.country_numeric_code,
-        countries.country_code_top_level_domain,
-        roles.role_id,
-        roles.role_technical_name,
-        roles.role_public_name,
-        roles.role_description,
-        organizations.organization_id,
-        organizations.organization_name,
-        organizations.organization_description,
-        organizations.parent_organization_id,
-        organizations.parent_organization_name,
-        organizations.parent_organization_description,
-        organizations.root_organization_id,
-        organizations.root_organization_name,
-        organizations.root_organization_description
+        internal_users.internal_user_first_name::text as user_first_name,
+        internal_users.internal_user_last_name::text as user_last_name,
+        internal_users.internal_user_middle_name::text as user_middle_name,
+        internal_users.internal_user_primary_email::text as user_primary_email,
+        internal_users.internal_user_secondary_email::text as user_secondary_email,
+        internal_users.internal_user_primary_phone_number::text as user_primary_phone_number,
+        internal_users.internal_user_secondary_phone_number::text as user_secondary_phone_number,
+        internal_users.internal_user_profile_photo_url::text as user_profile_photo_url,
+        internal_users.internal_user_position_name::text as user_position_name,
+        genders.gender_id::text,
+        genders.gender_technical_name::text,
+        genders.gender_public_name::text,
+        countries.country_id::text,
+        countries.country_short_name::text,
+        countries.country_official_name::text,
+        countries.country_alpha_2_code::text,
+        countries.country_alpha_3_code::text,
+        countries.country_numeric_code::text,
+        countries.country_code_top_level_domain::text,
+        roles.role_id::text,
+        roles.role_technical_name::text,
+        roles.role_public_name::text,
+        roles.role_description::text,
+        organizations.organization_id::text,
+        organizations.organization_name::text,
+        organizations.organization_description::text,
+        organizations.parent_organization_id::text,
+        organizations.parent_organization_name::text,
+        organizations.parent_organization_description::text,
+        organizations.root_organization_id::text,
+        organizations.root_organization_name::text,
+        organizations.root_organization_description::text
     from
         channels_organizations_relationship
     left join channels on
@@ -111,58 +208,50 @@ def lambda_handler(event, context):
     left join roles on
         internal_users.role_id = roles.role_id
     where
-        channels.channel_technical_id = '{0}'
+        channels.channel_technical_id = %(channel_technical_id)s
     and
-        channel_types.channel_type_name = '{1}'
+        channel_types.channel_type_name = %(channel_type_name)s
     and
         users.internal_user_id is not null
     and
         users.identified_user_id is null
     and
         users.unidentified_user_id is null
-    offset {2} limit {3};
-    """.format(
-        channel_technical_id,
-        channel_type_name,
-        offset,
-        limit
-    )
+    offset %(offset)s limit %(limit)s;
+    """
 
-    # Execute a previously prepared SQL query.
+    # Execute the SQL query dynamically, in a convenient and safe way.
     try:
-        cursor.execute(statement)
+        cursor.execute(sql_statement, sql_arguments)
     except Exception as error:
         logger.error(error)
-        sys.exit(1)
+        raise Exception(error)
 
-    # After the successful execution of the query commit your changes to the database.
-    postgresql_connection.commit()
+    # Return the data of the operators.
+    return cursor.fetchall()
 
-    # Fetch the next row of a query result set.
-    operators_entries = cursor.fetchall()
 
-    # The cursor will be unusable from this point forward.
-    cursor.close()
+def analyze_and_format_operators_data(**kwargs) -> List:
+    # Check if the input dictionary has all the necessary keys.
+    try:
+        operators_data = kwargs["operators_data"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
 
-    # Analyze the data about client received from the database.
-    operators = list()
-    if operators_entries is not None:
-        for entry in operators_entries:
-            operator = dict()
-            gender = dict()
-            country = dict()
-            role = dict()
-            organization = dict()
+    # Format the operator data.
+    operators = []
+    if operators_data:
+        for entry in operators_data:
+            operator, gender, country, role, organization = {}, {}, {}, {}, {}
             for key, value in entry.items():
-                if "_id" in key and value is not None:
-                    value = str(value)
-                if "gender_" in key:
+                if key.startswith("gender_"):
                     gender[utils.camel_case(key)] = value
-                elif "country_" in key:
+                elif key.startswith("country_"):
                     country[utils.camel_case(key)] = value
-                elif "role_" in key:
+                elif key.startswith("role_"):
                     role[utils.camel_case(key)] = value
-                elif "organization_" in key:
+                elif key.startswith("organization_"):
                     organization[utils.camel_case(key)] = value
                 else:
                     operator[utils.camel_case(key)] = value
@@ -172,5 +261,52 @@ def lambda_handler(event, context):
             operator["organization"] = organization
             operators.append(operator)
 
-    # Return the list of online operators as the response.
+    # Return the list of operators.
+    return operators
+
+
+def lambda_handler(event, context):
+    """
+    :param event: The AWS Lambda function uses this parameter to pass in event data to the handler.
+    :param context: The AWS Lambda function uses this parameter to provide runtime information to your handler.
+    """
+    # Run several initialization functions in parallel.
+    results_of_tasks = run_multithreading_tasks([
+        {
+            "function_object": check_input_arguments,
+            "function_arguments": {
+                "event": event
+            }
+        },
+        {
+            "function_object": reuse_or_recreate_postgresql_connection,
+            "function_arguments": {}
+        }
+    ])
+
+    # Define the input arguments of the AWS Lambda function.
+    input_arguments = results_of_tasks["input_arguments"]
+    channel_technical_id = input_arguments["channel_technical_id"]
+    channel_type_name = input_arguments["channel_type_name"]
+    limit = input_arguments["limit"]
+    offset = (input_arguments["offset"] - 1) * limit
+
+    # Define the instances of the database connections.
+    postgresql_connection = results_of_tasks["postgresql_connection"]
+
+    # Get the data of the operators.
+    operators_data = get_operators_data(
+        postgresql_connection=postgresql_connection,
+        sql_arguments={
+            "channel_technical_id": channel_technical_id,
+            "channel_type_name": channel_type_name,
+            "offset": offset,
+            "limit": limit
+        }
+    )
+
+    # Define the variable which store analyzed and formatted data of operators.
+    operators = analyze_and_format_operators_data(operators_data=operators_data)
+
+    # Return the list of operators.
     return operators

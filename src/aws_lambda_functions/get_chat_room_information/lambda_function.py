@@ -353,7 +353,7 @@ def get_operators_data(**kwargs) -> None:
         logger.error(error)
         raise Exception(error)
 
-    # Prepare the SQL query that returns the information of an operator.
+    # Prepare the SQL query that returns the information of operators.
     sql_statement = """
     select
         distinct on (aggregated_data.user_id) user_id,
@@ -503,7 +503,7 @@ def analyze_and_format_operators_data(**kwargs) -> None:
         logger.error(error)
         raise Exception(error)
 
-    # Format the aggregated data.
+    # Format the operators data.
     operators = []
     if operators_data:
         for entry in operators_data:
@@ -540,7 +540,7 @@ def analyze_and_format_client_data(**kwargs) -> None:
         logger.error(error)
         raise Exception(error)
 
-    # Format the aggregated data.
+    # Format the client data.
     client = {}
     if client_data:
         gender, country = {}, {}
