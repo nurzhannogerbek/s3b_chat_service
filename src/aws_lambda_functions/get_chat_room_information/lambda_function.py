@@ -356,66 +356,105 @@ def get_operators_data(**kwargs) -> None:
     # Prepare the SQL query that returns the information of an operator.
     sql_statement = """
     select
-        chat_rooms_users_relationship.entry_created_date_time as chat_room_member_since_date_time,
-        internal_users.auth0_user_id::text,
-        internal_users.auth0_metadata::text,
-        users.user_id::text,
-        internal_users.internal_user_first_name::text as user_first_name,
-        internal_users.internal_user_last_name::text as user_last_name,
-        internal_users.internal_user_middle_name::text as user_middle_name,
-        internal_users.internal_user_primary_email::text as user_primary_email,
-        internal_users.internal_user_secondary_email::text as user_secondary_email,
-        internal_users.internal_user_primary_phone_number::text as user_primary_phone_number,
-        internal_users.internal_user_secondary_phone_number::text as user_secondary_phone_number,
-        internal_users.internal_user_profile_photo_url::text as user_profile_photo_url,
-        internal_users.internal_user_position_name::text as user_position_name,
-        genders.gender_id::text,
-        genders.gender_technical_name::text,
-        genders.gender_public_name::text,
-        countries.country_id::text,
-        countries.country_short_name::text,
-        countries.country_official_name::text,
-        countries.country_alpha_2_code::text,
-        countries.country_alpha_3_code::text,
-        countries.country_numeric_code::text,
-        countries.country_code_top_level_domain::text,
-        roles.role_id::text,
-        roles.role_technical_name::text,
-        roles.role_public_name::text,
-        roles.role_description::text,
-        organizations.organization_id::text,
-        organizations.organization_name::text,
-        organizations.organization_description::text,
-        organizations.parent_organization_id::text,
-        organizations.parent_organization_name::text,
-        organizations.parent_organization_description::text,
-        organizations.root_organization_id::text,
-        organizations.root_organization_name::text,
-        organizations.root_organization_description::text
-    from
-        chat_rooms_users_relationship
-    left join users on
-        chat_rooms_users_relationship.user_id = users.user_id
-    left join internal_users on
-        users.internal_user_id = internal_users.internal_user_id
-    left join genders on
-        internal_users.gender_id = genders.gender_id
-    left join countries on
-        internal_users.country_id = countries.country_id
-    left join roles on
-        internal_users.role_id = roles.role_id
-    left join organizations on
-        internal_users.organization_id = organizations.organization_id
-    where
-        chat_rooms_users_relationship.chat_room_id = %(chat_room_id)s
-    and
-        users.internal_user_id is not null
-    and
-        users.identified_user_id is null
-    and
-        users.unidentified_user_id is null
-    order by
-        chat_rooms_users_relationship.entry_created_date_time desc;
+        distinct on (aggregated_data.user_id) user_id,
+        aggregated_data.chat_room_member_since_date_time,
+        aggregated_data.auth0_user_id,
+        aggregated_data.auth0_metadata,
+        aggregated_data.user_first_name,
+        aggregated_data.user_last_name,
+        aggregated_data.user_middle_name,
+        aggregated_data.user_primary_email,
+        aggregated_data.user_secondary_email,
+        aggregated_data.user_primary_phone_number,
+        aggregated_data.user_secondary_phone_number,
+        aggregated_data.user_profile_photo_url,
+        aggregated_data.user_position_name,
+        aggregated_data.gender_id,
+        aggregated_data.gender_technical_name,
+        aggregated_data.gender_public_name,
+        aggregated_data.country_id,
+        aggregated_data.country_short_name,
+        aggregated_data.country_official_name,
+        aggregated_data.country_alpha_2_code,
+        aggregated_data.country_alpha_3_code,
+        aggregated_data.country_numeric_code,
+        aggregated_data.country_code_top_level_domain,
+        aggregated_data.role_id,
+        aggregated_data.role_technical_name,
+        aggregated_data.role_public_name,
+        aggregated_data.role_description,
+        aggregated_data.organization_id,
+        aggregated_data.organization_name,
+        aggregated_data.organization_description,
+        aggregated_data.parent_organization_id,
+        aggregated_data.parent_organization_name,
+        aggregated_data.parent_organization_description,
+        aggregated_data.root_organization_id,
+        aggregated_data.root_organization_name,
+        aggregated_data.root_organization_description
+    from (
+        select
+            chat_rooms_users_relationship.entry_created_date_time as chat_room_member_since_date_time,
+            internal_users.auth0_user_id::text,
+            internal_users.auth0_metadata::text,
+            users.user_id::text user_id,
+            internal_users.internal_user_first_name::text as user_first_name,
+            internal_users.internal_user_last_name::text as user_last_name,
+            internal_users.internal_user_middle_name::text as user_middle_name,
+            internal_users.internal_user_primary_email::text as user_primary_email,
+            internal_users.internal_user_secondary_email::text as user_secondary_email,
+            internal_users.internal_user_primary_phone_number::text as user_primary_phone_number,
+            internal_users.internal_user_secondary_phone_number::text as user_secondary_phone_number,
+            internal_users.internal_user_profile_photo_url::text as user_profile_photo_url,
+            internal_users.internal_user_position_name::text as user_position_name,
+            genders.gender_id::text,
+            genders.gender_technical_name::text,
+            genders.gender_public_name::text,
+            countries.country_id::text,
+            countries.country_short_name::text,
+            countries.country_official_name::text,
+            countries.country_alpha_2_code::text,
+            countries.country_alpha_3_code::text,
+            countries.country_numeric_code::text,
+            countries.country_code_top_level_domain::text,
+            roles.role_id::text,
+            roles.role_technical_name::text,
+            roles.role_public_name::text,
+            roles.role_description::text,
+            organizations.organization_id::text,
+            organizations.organization_name::text,
+            organizations.organization_description::text,
+            organizations.parent_organization_id::text,
+            organizations.parent_organization_name::text,
+            organizations.parent_organization_description::text,
+            organizations.root_organization_id::text,
+            organizations.root_organization_name::text,
+            organizations.root_organization_description::text
+        from
+            chat_rooms_users_relationship
+        left join users on
+            chat_rooms_users_relationship.user_id = users.user_id
+        left join internal_users on
+            users.internal_user_id = internal_users.internal_user_id
+        left join genders on
+            internal_users.gender_id = genders.gender_id
+        left join countries on
+            internal_users.country_id = countries.country_id
+        left join roles on
+            internal_users.role_id = roles.role_id
+        left join organizations on
+            internal_users.organization_id = organizations.organization_id
+        where
+            chat_rooms_users_relationship.chat_room_id = %(chat_room_id)s
+        and
+            users.internal_user_id is not null
+        and
+            users.identified_user_id is null
+        and
+            users.unidentified_user_id is null
+        order by
+            chat_rooms_users_relationship.entry_created_date_time desc
+    ) aggregated_data;
     """
 
     # Execute the SQL query dynamically, in a convenient and safe way.
