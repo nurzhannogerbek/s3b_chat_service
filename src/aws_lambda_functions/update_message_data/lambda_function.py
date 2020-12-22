@@ -589,7 +589,7 @@ def update_chat_room_messages_statuses(**kwargs) -> None:
     and
         message_id = %(message_id)s
     if exists;
-    """.format(column_name)
+    """.format(column_name.lower())
 
     # Update the status of each message individually.
     for message_id in messages_ids:
