@@ -366,7 +366,7 @@ def get_aggregated_data(**kwargs) -> Dict[AnyStr, Any]:
         limit 1;
         """
     else:
-        raise Exception("Processing of a chat room with the status '%s' is not possible.".format(chat_room_status))
+        raise Exception("Processing of a chat room with the status '{0}' is not possible.".format(chat_room_status))
 
     # Execute the SQL query dynamically, in a convenient and safe way.
     try:
@@ -524,7 +524,7 @@ def update_last_message_content_data(**kwargs) -> None:
             logger.error(error)
             raise Exception(error)
     else:
-        raise Exception("Processing of a chat room with the status '%s' is not possible.".format(chat_room_status))
+        raise Exception("Processing of a chat room with the status '{0}' is not possible.".format(chat_room_status))
 
     # Return nothing.
     return None

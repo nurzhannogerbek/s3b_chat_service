@@ -96,14 +96,14 @@ def check_input_arguments(**kwargs) -> None:
     required_arguments = ["chatRoomId", "clientId", "lastMessageContent"]
     for argument_name, argument_value in input_arguments.items():
         if argument_name not in required_arguments:
-            raise Exception("The '%s' argument doesn't exist.".format(utils.camel_case(argument_name)))
+            raise Exception("The '{0}' argument doesn't exist.".format(utils.camel_case(argument_name)))
         if argument_value is None:
-            raise Exception("The '%s' argument can't be None/Null/Undefined.".format(utils.camel_case(argument_name)))
+            raise Exception("The '{0}' argument can't be None/Null/Undefined.".format(utils.camel_case(argument_name)))
         if argument_name.endswith("Id"):
             try:
                 uuid.UUID(argument_value)
             except ValueError:
-                raise Exception("The '%s' argument format is not UUID.".format(utils.camel_case(argument_name)))
+                raise Exception("The '{0}' argument format is not UUID.".format(utils.camel_case(argument_name)))
 
     # Put the result of the function in the queue.
     queue.put({

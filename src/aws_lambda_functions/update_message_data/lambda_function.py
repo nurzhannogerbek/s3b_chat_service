@@ -95,14 +95,14 @@ def check_input_arguments(**kwargs) -> None:
     required_arguments = ["chatRoomId", "messagesIds", "messageStatus", "isClient"]
     for argument_name, argument_value in input_arguments.items():
         if argument_name not in required_arguments:
-            raise Exception("The '%s' argument doesn't exist.".format(utils.camel_case(argument_name)))
+            raise Exception("The '{0}' argument doesn't exist.".format(utils.camel_case(argument_name)))
         if argument_value is None:
-            raise Exception("The '%s' argument can't be None/Null/Undefined.".format(utils.camel_case(argument_name)))
+            raise Exception("The '{0}' argument can't be None/Null/Undefined.".format(utils.camel_case(argument_name)))
         if argument_name.endswith("Id"):
             try:
                 uuid.UUID(argument_value)
             except ValueError:
-                raise Exception("The '%s' argument format is not UUID.".format(utils.camel_case(argument_name)))
+                raise Exception("The '{0}' argument format is not UUID.".format(utils.camel_case(argument_name)))
 
     # Put the result of the function in the queue.
     queue.put({
@@ -300,7 +300,7 @@ def get_aggregated_data(**kwargs) -> Dict[AnyStr, Any]:
         limit 1;
         """
     else:
-        raise Exception("Processing of a chat room with the status '%s' is not possible.".format(chat_room_status))
+        raise Exception("Processing of a chat room with the status '{0}' is not possible.".format(chat_room_status))
 
     # Execute the SQL query dynamically, in a convenient and safe way.
     try:
@@ -480,7 +480,7 @@ def update_unread_messages_number(**kwargs) -> int:
             logger.error(error)
             raise Exception(error)
     else:
-        raise Exception("Processing of a chat room with the status '%s' is not possible.".format(chat_room_status))
+        raise Exception("Processing of a chat room with the status '{0}' is not possible.".format(chat_room_status))
 
     # Return the unread messages number.
     return unread_messages_number
@@ -535,7 +535,7 @@ def get_unread_messages_number(**kwargs) -> int:
         limit 1;
         """
     else:
-        raise Exception("Processing of a chat room with the status '%s' is not possible.".format(chat_room_status))
+        raise Exception("Processing of a chat room with the status '{0}' is not possible.".format(chat_room_status))
 
     # Execute the CQL query dynamically, in a convenient and safe way.
     try:
