@@ -192,7 +192,7 @@ def get_aggregated_data(**kwargs) -> None:
         raise Exception(error)
 
     # Put the result of the function in the queue.
-    queue.put({"aggregated data": cursor.fetchone()})
+    queue.put({"aggregated_data": cursor.fetchone()})
 
     # Return nothing.
     return None
