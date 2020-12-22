@@ -496,16 +496,16 @@ def analyze_and_format_client_data(**kwargs) -> None:
 def analyze_and_format_operators_data(**kwargs) -> None:
     # Check if the input dictionary has all the necessary keys.
     try:
-        client_data = kwargs["client_data"]
+        operators_data = kwargs["operators_data"]
     except KeyError as error:
         logger.error(error)
         raise Exception(error)
 
     # Format the aggregated data.
     client = {}
-    if client_data:
+    if operators_data:
         gender, country = {}, {}
-        for key, value in client_data.items():
+        for key, value in operators_data.items():
             if key.endswith("_date_time"):
                 value = value.isoformat()
             if key.startswith("gender_"):
@@ -601,7 +601,7 @@ def lambda_handler(event, context):
         {
             "function_object": analyze_and_format_aggregated_data,
             "function_arguments": {
-                "client_data": aggregated_data
+                "aggregated_data": aggregated_data
             }
         },
         {
@@ -613,7 +613,7 @@ def lambda_handler(event, context):
         {
             "function_object": analyze_and_format_operators_data,
             "function_arguments": {
-                "client_data": operators_data
+                "operators_data": operators_data
             }
         }
     ])
