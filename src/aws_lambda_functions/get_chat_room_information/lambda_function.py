@@ -394,10 +394,10 @@ def get_operators_data(**kwargs) -> None:
         aggregated_data.root_organization_description
     from (
         select
+            users.user_id::text user_id,
             chat_rooms_users_relationship.entry_created_date_time as chat_room_member_since_date_time,
             internal_users.auth0_user_id::text,
             internal_users.auth0_metadata::text,
-            users.user_id::text user_id,
             internal_users.internal_user_first_name::text as user_first_name,
             internal_users.internal_user_last_name::text as user_last_name,
             internal_users.internal_user_middle_name::text as user_middle_name,
