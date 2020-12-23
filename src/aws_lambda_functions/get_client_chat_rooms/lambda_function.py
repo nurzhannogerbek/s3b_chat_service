@@ -327,7 +327,7 @@ def get_last_operators_data(**kwargs) -> None:
     and
         users.identified_user_id is null
     order by
-        chat_rooms_users_relationship.chat_room_id::text,
+        chat_rooms_users_relationship.chat_room_id,
         chat_rooms_users_relationship.entry_created_date_time desc;
     """
 
