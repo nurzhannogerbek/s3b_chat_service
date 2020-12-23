@@ -319,7 +319,7 @@ def get_last_operators_data(**kwargs) -> None:
     left join organizations on
         internal_users.organization_id = organizations.organization_id
     where
-        chat_rooms_users_relationship.chat_room_id in (%(chat_rooms_ids)s)
+        chat_rooms_users_relationship.chat_room_id in %(chat_rooms_ids)s
     and
         users.internal_user_id is not null
     and
