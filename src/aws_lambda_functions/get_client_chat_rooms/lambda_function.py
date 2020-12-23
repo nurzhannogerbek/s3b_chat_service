@@ -7,7 +7,6 @@ from typing import *
 import uuid
 from threading import Thread
 from queue import Queue
-from datetime import datetime
 import databases
 import utils
 
