@@ -816,6 +816,7 @@ def lambda_handler(event, context):
     # Create the response structure and return it.
     return {
         "chatRoomId": chat_room_id,
+        "chatRoomStatus": chat_room_status,
         "chatRoomMessages": chat_room_messages,
         "unreadMessagesNumber": unread_messages_number
     }

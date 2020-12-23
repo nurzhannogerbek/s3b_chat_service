@@ -749,5 +749,8 @@ def lambda_handler(event, context):
     # Send the channel id so that the subscription works correctly on the frontend.
     chat_room_message["channelId"] = channel_id
 
+    # Return the chat room status to the frontend.
+    chat_room_message["chatRoomStatus"] = chat_room_status
+
     # Return data of the created chat room message.
     return chat_room_message
