@@ -268,7 +268,7 @@ def get_last_operators_data(**kwargs) -> None:
     # Prepare the SQL query that returns the last operator information of each client's chat rooms.
     sql_statement = """
     select
-        distinct on (chat_rooms_users_relationship.chat_room_id::text) chat_room_id,
+        distinct on (chat_rooms_users_relationship.chat_room_id) chat_room_id,
         internal_users.auth0_user_id::text,
         internal_users.auth0_metadata::text,
         users.user_id::text,
@@ -327,7 +327,7 @@ def get_last_operators_data(**kwargs) -> None:
     and
         users.identified_user_id is null
     order by
-        chat_rooms_users_relationship.chat_room_id,
+        chat_rooms_users_relationship.chat_room_id::text,
         chat_rooms_users_relationship.entry_created_date_time desc;
     """
 
@@ -541,7 +541,7 @@ def lambda_handler(event, context):
                 "function_arguments": {
                     "postgresql_connection": postgresql_connection,
                     "sql_arguments": {
-                        "chat_rooms_ids": chat_rooms_ids
+                        "chat_rooms_ids": tuple(chat_rooms_ids)
                     }
                 }
             }
