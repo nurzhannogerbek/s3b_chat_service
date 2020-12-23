@@ -402,6 +402,9 @@ def get_last_messages_data(**kwargs) -> None:
 
     # Parse the aggregated data.
     for record in aggregated_data:
+        # Change the data type of the argument.
+        cql_arguments["chat_room_id"] = uuid.UUID(record["chat_room_id"])
+
         # Prepare the CQL query that returns the contents of the last message of the particular chat room.
         cql_statement = """
         select
@@ -520,7 +523,7 @@ def lambda_handler(event, context):
     # Check if there is aggregated data.
     if aggregated_data:
         # Define the list of chat rooms ids.
-        chat_rooms_ids = [str(item["chat_room_id"]) for item in aggregated_data]
+        chat_rooms_ids = [item["chat_room_id"] for item in aggregated_data]
 
         # Run several initialization functions in parallel.
         results_of_tasks = run_multithreading_tasks([
