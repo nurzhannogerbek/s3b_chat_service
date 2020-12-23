@@ -1,59 +1,131 @@
-import databases
-import utils
 import logging
-import sys
 import os
 from psycopg2.extras import RealDictCursor
+from cassandra.cluster import Session
+from functools import wraps
+from typing import *
+import uuid
+from threading import Thread
+from queue import Queue
+from datetime import datetime
+import databases
+import utils
 
+# Configure the logging tool in the AWS Lambda function.
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.ERROR)
 
-"""
-Define connections to databases outside of the "lambda_handler" function.
-Connections to databases will be created the first time the function is called.
-Any subsequent function call will use the same database connections.
-"""
-cassandra_connection = None
-postgresql_connection = None
-
-# Define databases settings parameters.
-CASSANDRA_USERNAME = os.environ["CASSANDRA_USERNAME"]
-CASSANDRA_PASSWORD = os.environ["CASSANDRA_PASSWORD"]
-CASSANDRA_HOST = os.environ["CASSANDRA_HOST"].split(',')
-CASSANDRA_PORT = int(os.environ["CASSANDRA_PORT"])
-CASSANDRA_LOCAL_DC = os.environ["CASSANDRA_LOCAL_DC"]
-CASSANDRA_KEYSPACE_NAME = os.environ["CASSANDRA_KEYSPACE_NAME"]
+# Initialize constants with parameters to configure.
 POSTGRESQL_USERNAME = os.environ["POSTGRESQL_USERNAME"]
 POSTGRESQL_PASSWORD = os.environ["POSTGRESQL_PASSWORD"]
 POSTGRESQL_HOST = os.environ["POSTGRESQL_HOST"]
 POSTGRESQL_PORT = int(os.environ["POSTGRESQL_PORT"])
 POSTGRESQL_DB_NAME = os.environ["POSTGRESQL_DB_NAME"]
+CASSANDRA_USERNAME = os.environ["CASSANDRA_USERNAME"]
+CASSANDRA_PASSWORD = os.environ["CASSANDRA_PASSWORD"]
+CASSANDRA_HOST = os.environ["CASSANDRA_HOST"].split(",")
+CASSANDRA_PORT = int(os.environ["CASSANDRA_PORT"])
+CASSANDRA_LOCAL_DC = os.environ["CASSANDRA_LOCAL_DC"]
+CASSANDRA_KEYSPACE_NAME = os.environ["CASSANDRA_KEYSPACE_NAME"]
 
-logger = logging.getLogger(__name__)  # Create the logger with the specified name.
-logger.setLevel(logging.WARNING)  # Set the logging level of the logger.
+# The connection to the database will be created the first time the AWS Lambda function is called.
+# Any subsequent call to the function will use the same database connection until the container stops.
+POSTGRESQL_CONNECTION = None
+CASSANDRA_CONNECTION = None
+
+# Define the global variable.
+chat_rooms = []
 
 
-def lambda_handler(event, context):
-    """
-    :argument event: The AWS Lambda uses this parameter to pass in event data to the handler.
-    :argument context: The AWS Lambda uses this parameter to provide runtime information to your handler.
-    """
-    # Since connections with databases were defined outside of the function, we create global variables.
-    global cassandra_connection
-    if not cassandra_connection:
+def run_multithreading_tasks(functions: List[Dict[AnyStr, Union[Callable, Dict[AnyStr, Any]]]]) -> Dict[AnyStr, Any]:
+    # Create the empty list to save all parallel threads.
+    threads = []
+
+    # Create the queue to store all results of functions.
+    queue = Queue()
+
+    # Create the thread for each function.
+    for function in functions:
+        # Check whether the input arguments have keys in their dictionaries.
         try:
-            cassandra_connection = databases.create_cassandra_connection(
-                CASSANDRA_USERNAME,
-                CASSANDRA_PASSWORD,
-                CASSANDRA_HOST,
-                CASSANDRA_PORT,
-                CASSANDRA_LOCAL_DC
-            )
-        except Exception as error:
+            function_object = function["function_object"]
+        except KeyError as error:
             logger.error(error)
-            sys.exit(1)
-    global postgresql_connection
-    if not postgresql_connection:
+            raise Exception(error)
         try:
-            postgresql_connection = databases.create_postgresql_connection(
+            function_arguments = function["function_arguments"]
+        except KeyError as error:
+            logger.error(error)
+            raise Exception(error)
+
+        # Add the instance of the queue to the list of function arguments.
+        function_arguments["queue"] = queue
+
+        # Create the thread.
+        thread = Thread(target=function_object, kwargs=function_arguments)
+        threads.append(thread)
+
+    # Start all parallel threads.
+    for thread in threads:
+        thread.start()
+
+    # Wait until all parallel threads are finished.
+    for thread in threads:
+        thread.join()
+
+    # Get the results of all threads.
+    results = {}
+    while not queue.empty():
+        results = {**results, **queue.get()}
+
+    # Return the results of all threads.
+    return results
+
+
+def check_input_arguments(**kwargs) -> None:
+    # Make sure that all the necessary arguments for the AWS Lambda function are present.
+    try:
+        input_arguments = kwargs["event"]["arguments"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        queue = kwargs["queue"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+
+    # Check the format and values of required arguments in the list of input arguments.
+    required_arguments = ["channelTechnicalId", "channelTypeName", "clientId", "currentPageNumber", "recordsNumber"]
+    for argument_name, argument_value in input_arguments.items():
+        if argument_name in required_arguments and argument_value is None:
+            raise Exception("The '{0}' argument can't be None/Null/Undefined.".format(utils.camel_case(argument_name)))
+        if argument_name == "clientId":
+            try:
+                uuid.UUID(argument_value)
+            except ValueError:
+                raise Exception("The '{0}' argument format is not UUID.".format(utils.camel_case(argument_name)))
+
+    # Put the result of the function in the queue.
+    queue.put({
+        "input_arguments": {
+            "channel_technical_id": input_arguments.get("channelTechnicalId", None),
+            "channel_type_name": input_arguments.get("channelTypeName", None),
+            "clientId": input_arguments.get("clientId", None),
+            "offset": input_arguments.get("currentPageNumber", None),
+            "limit": input_arguments.get("recordsNumber", None),
+        }
+    })
+
+    # Return nothing.
+    return None
+
+
+def reuse_or_recreate_postgresql_connection(queue: Queue) -> None:
+    global POSTGRESQL_CONNECTION
+    if not POSTGRESQL_CONNECTION:
+        try:
+            POSTGRESQL_CONNECTION = databases.create_postgresql_connection(
                 POSTGRESQL_USERNAME,
                 POSTGRESQL_PASSWORD,
                 POSTGRESQL_HOST,
@@ -62,25 +134,89 @@ def lambda_handler(event, context):
             )
         except Exception as error:
             logger.error(error)
-            sys.exit(1)
+            raise Exception("Unable to connect to the PostgreSQL database.")
+    queue.put({"postgresql_connection": POSTGRESQL_CONNECTION})
+    return None
 
-    # Define the values of the data passed to the function.
-    channel_technical_id = event["arguments"]["channelTechnicalId"]
-    channel_type_name = event["arguments"]["channelTypeName"]
-    client_id = event["arguments"]["clientId"]
-    offset = event["arguments"]["currentPageNumber"]
-    limit = event["arguments"]["recordsNumber"]
-    offset = (offset - 1) * limit
 
-    # With a dictionary cursor, the data is sent in a form of Python dictionaries.
-    cursor = postgresql_connection.cursor(cursor_factory=RealDictCursor)
+def reuse_or_recreate_cassandra_connection(queue: Queue) -> None:
+    global CASSANDRA_CONNECTION
+    if not CASSANDRA_CONNECTION:
+        try:
+            CASSANDRA_CONNECTION = databases.create_cassandra_connection(
+                CASSANDRA_USERNAME,
+                CASSANDRA_PASSWORD,
+                CASSANDRA_HOST,
+                CASSANDRA_PORT,
+                CASSANDRA_LOCAL_DC
+            )
+        except Exception as error:
+            logger.error(error)
+            raise Exception("Unable to connect to the Cassandra database.")
+    queue.put({"cassandra_connection": CASSANDRA_CONNECTION})
+    return None
 
-    # Prepare the SQL request that gives the N number of chat rooms that the user participated in.
-    statement = """
+
+def set_cassandra_keyspace(cassandra_connection: Session) -> None:
+    # This peace of code fix ERROR NoHostAvailable: ("Unable to complete the operation against any hosts").
+    successful_operation = False
+    while not successful_operation:
+        try:
+            cassandra_connection.set_keyspace(CASSANDRA_KEYSPACE_NAME)
+            successful_operation = True
+        except Exception as error:
+            try:
+                cassandra_connection = databases.create_cassandra_connection(
+                    CASSANDRA_USERNAME,
+                    CASSANDRA_PASSWORD,
+                    CASSANDRA_HOST,
+                    CASSANDRA_PORT,
+                    CASSANDRA_LOCAL_DC
+                )
+            except Exception as error:
+                logger.error(error)
+                raise Exception(error)
+
+    # Return nothing.
+    return None
+
+
+def postgresql_wrapper(function):
+    @wraps(function)
+    def wrapper(**kwargs):
+        try:
+            postgresql_connection = kwargs["postgresql_connection"]
+        except KeyError as error:
+            logger.error(error)
+            raise Exception(error)
+        cursor = postgresql_connection.cursor(cursor_factory=RealDictCursor)
+        kwargs["cursor"] = cursor
+        result = function(**kwargs)
+        cursor.close()
+        return result
+    return wrapper
+
+
+@postgresql_wrapper
+def get_aggregated_data(**kwargs) -> List:
+    # Check if the input dictionary has all the necessary keys.
+    try:
+        cursor = kwargs["cursor"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        sql_arguments = kwargs["sql_arguments"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+
+    # Prepare the SQL query that returns the aggregated data.
+    sql_statement = """
     select
         chat_rooms_users_relationship.entry_created_date_time as chat_room_member_since_date_time,
-        chat_rooms.chat_room_id,
-        chat_rooms.chat_room_status
+        chat_rooms.chat_room_id::text,
+        chat_rooms.chat_room_status::text
     from
         chat_rooms_users_relationship
     left join chat_rooms on
@@ -90,234 +226,335 @@ def lambda_handler(event, context):
     left join channel_types on
         channels.channel_type_id = channel_types.channel_type_id 
     where
-        chat_rooms_users_relationship.user_id = '{0}'
+        chat_rooms_users_relationship.user_id = %(client_id)s
     and
-        channels.channel_technical_id = '{1}'
+        channels.channel_technical_id = %(channel_technical_id)s
     and
-        lower(channel_types.channel_type_name) = lower('{2}')
+        channel_types.channel_type_name = %(channel_type_name)s
     order by
         chat_rooms_users_relationship.entry_created_date_time desc
-    offset {3} limit {4};
-    """.format(
-        client_id,
-        channel_technical_id,
-        channel_type_name,
-        offset,
-        limit
-    )
+    offset %(offset)s limit %(limit)s;
+    """
 
-    # Execute a previously prepared SQL query.
+    # Execute the SQL query dynamically, in a convenient and safe way.
     try:
-        cursor.execute(statement)
+        cursor.execute(sql_statement, sql_arguments)
     except Exception as error:
         logger.error(error)
-        sys.exit(1)
+        raise Exception(error)
 
-    # After the successful execution of the query commit your changes to the database.
-    postgresql_connection.commit()
+    # Return the aggregated data.
+    return cursor.fetchall()
 
-    # Fetch the next row of a query result set.
-    aggregated_data_entries = cursor.fetchall()
 
-    # Define the empty list.
-    chat_rooms = list()
+@postgresql_wrapper
+def get_last_operators_data(**kwargs) -> None:
+    # Check if the input dictionary has all the necessary keys.
+    try:
+        cursor = kwargs["cursor"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        sql_arguments = kwargs["sql_arguments"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        queue = kwargs["queue"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
 
-    # Create lists with IDs depending on the type of chat room.
-    if aggregated_data_entries is not None:
-        # Set the name of the keyspace you will be working with.
-        # This statement must fix ERROR NoHostAvailable: ('Unable to complete the operation against any hosts').
-        success = False
-        while not success:
-            try:
-                cassandra_connection.set_keyspace(CASSANDRA_KEYSPACE_NAME)
-                success = True
-            except Exception as error:
-                try:
-                    cassandra_connection = databases.create_cassandra_connection(
-                        CASSANDRA_USERNAME,
-                        CASSANDRA_PASSWORD,
-                        CASSANDRA_HOST,
-                        CASSANDRA_PORT,
-                        CASSANDRA_LOCAL_DC
-                    )
-                except Exception as error:
-                    logger.error(error)
-                    sys.exit(1)
+    # Prepare the SQL query that returns the last operator information of each client's chat rooms.
+    sql_statement = """
+    select
+        distinct on (chat_rooms_users_relationship.chat_room_id::text) chat_room_id,
+        internal_users.auth0_user_id::text,
+        internal_users.auth0_metadata::text,
+        users.user_id::text,
+        internal_users.internal_user_first_name::text as user_first_name,
+        internal_users.internal_user_last_name::text as user_last_name,
+        internal_users.internal_user_middle_name::text as user_middle_name,
+        internal_users.internal_user_primary_email::text as user_primary_email,
+        internal_users.internal_user_secondary_email::text as user_secondary_email,
+        internal_users.internal_user_primary_phone_number::text as user_primary_phone_number,
+        internal_users.internal_user_secondary_phone_number::text as user_secondary_phone_number,
+        internal_users.internal_user_profile_photo_url::text as user_profile_photo_url,
+        internal_users.internal_user_position_name::text as user_position_name,
+        genders.gender_id::text,
+        genders.gender_technical_name::text,
+        genders.gender_public_name::text,
+        countries.country_id::text,
+        countries.country_short_name::text,
+        countries.country_official_name::text,
+        countries.country_alpha_2_code::text,
+        countries.country_alpha_3_code::text,
+        countries.country_numeric_code::text,
+        countries.country_code_top_level_domain::text,
+        roles.role_id::text,
+        roles.role_technical_name::text,
+        roles.role_public_name::text,
+        roles.role_description::text,
+        organizations.organization_id::text,
+        organizations.organization_name::text,
+        organizations.organization_description::text,
+        organizations.parent_organization_id::text,
+        organizations.parent_organization_name::text,
+        organizations.parent_organization_description::text,
+        organizations.root_organization_id::text,
+        organizations.root_organization_name::text,
+        organizations.root_organization_description::text
+    from
+        chat_rooms_users_relationship
+    left join users on
+        chat_rooms_users_relationship.user_id = users.user_id
+    left join internal_users on
+        users.internal_user_id = internal_users.internal_user_id
+    left join genders on
+        internal_users.gender_id = genders.gender_id
+    left join countries on
+        internal_users.country_id = countries.country_id
+    left join roles on
+        internal_users.role_id = roles.role_id
+    left join organizations on
+        internal_users.organization_id = organizations.organization_id
+    where
+        chat_rooms_users_relationship.chat_room_id in (%(chat_rooms_ids)s)
+    and
+        users.internal_user_id is not null
+    and
+        users.unidentified_user_id is null
+    and
+        users.identified_user_id is null
+    order by
+        chat_rooms_users_relationship.chat_room_id,
+        chat_rooms_users_relationship.entry_created_date_time desc;
+    """
 
-        # Define several variables.
-        chat_rooms_ids = list()
-        chat_rooms_last_messages_storage = dict()
+    # Execute the SQL query dynamically, in a convenient and safe way.
+    try:
+        cursor.execute(sql_statement, sql_arguments)
+    except Exception as error:
+        logger.error(error)
+        raise Exception(error)
 
-        # Prepare additional data for the chat rooms.
-        for entry in aggregated_data_entries:
-            # Create the list of chat rooms IDs.
-            chat_rooms_ids.append(entry["chat_room_id"])
+    # Define the variable which stores the list of last operators of chat_rooms.
+    operators_data = cursor.fetchall()
 
-            # Prepare the CQL query that returns information about the last message of the specific chat room.
-            cassandra_query = """
-            select
-                message_created_date_time,
-                message_updated_date_time,
-                message_deleted_date_time,
-                message_is_sent,
-                message_is_delivered,
-                message_is_read,
-                message_id,
-                message_author_id,
-                message_channel_id,
-                message_type,
-                message_text,
-                message_content_url,
-                quoted_message_id,
-                quoted_message_author_id,
-                quoted_message_channel_id,
-                quoted_message_type,
-                quoted_message_text,
-                quoted_message_content_url
-            from
-                chat_rooms_messages
-            where
-                chat_room_id = {0}
-            limit 1;
-            """.format(entry["chat_room_id"])
+    # Define the variable that stores information about last operator from different chat rooms.
+    last_operators_data = {}
 
-            # Execute a previously prepared SQL query.
-            try:
-                chat_room_message_entry = cassandra_connection.execute(cassandra_query).one()
-            except Exception as error:
-                logger.error(error)
-                sys.exit(1)
+    # Format the operators data.
+    if operators_data:
+        for record in operators_data:
+            operator, gender, country, role, organization = {}, {}, {}, {}, {}
+            for key, value in record.items():
+                if key.startswith("gender_"):
+                    gender[utils.camel_case(key)] = value
+                elif key.startswith("country_"):
+                    country[utils.camel_case(key)] = value
+                elif key.startswith("role_"):
+                    role[utils.camel_case(key)] = value
+                elif key.startswith("organization_"):
+                    organization[utils.camel_case(key)] = value
+                elif key == "chat_room_id":
+                    continue
+                else:
+                    operator[utils.camel_case(key)] = value
+            operator["gender"] = gender
+            operator["country"] = country
+            operator["role"] = role
+            operator["organization"] = organization
+            last_operators_data[record["chat_room_id"]] = operator
 
-            # Analyze the data about chat room message received from the database.
-            chat_room_last_message = dict()
-            if chat_room_message_entry is not None:
-                chat_room_last_message["lastMessageContent"] = chat_room_message_entry["message_text"]
-                chat_room_last_message["lastMessageDateTime"] = str(chat_room_message_entry["message_created_date_time"])
-                chat_rooms_last_messages_storage[entry["chat_room_id"]] = chat_room_last_message
+    # Put the result of the function in the queue.
+    queue.put({"last_operators_data": last_operators_data})
 
-        # Define the Determine the last operators of chat rooms.
-        statement = """
+    # Return nothing.
+    return None
+
+
+def get_last_messages_data(**kwargs) -> None:
+    # Check if the input dictionary has all the necessary keys.
+    try:
+        cassandra_connection = kwargs["cassandra_connection"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        cql_arguments = kwargs["cql_arguments"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        aggregated_data = cql_arguments["aggregated_data"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        queue = kwargs["queue"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+
+    # Define the variable that stores information about last messages from different chat rooms.
+    last_messages_data = {}
+
+    # Parse the aggregated data.
+    for record in aggregated_data:
+        # Prepare the CQL query that returns the contents of the last message of the particular chat room.
+        cql_statement = """
         select
-            distinct on (chat_rooms_users_relationship.chat_room_id) chat_room_id,
-            internal_users.auth0_user_id,
-            internal_users.auth0_metadata::text,
-            users.user_id,
-            internal_users.internal_user_first_name as user_first_name,
-            internal_users.internal_user_last_name as user_last_name,
-            internal_users.internal_user_middle_name as user_middle_name,
-            internal_users.internal_user_primary_email as user_primary_email,
-            internal_users.internal_user_secondary_email as user_secondary_email,
-            internal_users.internal_user_primary_phone_number as user_primary_phone_number,
-            internal_users.internal_user_secondary_phone_number as user_secondary_phone_number,
-            internal_users.internal_user_profile_photo_url as user_profile_photo_url,
-            internal_users.internal_user_position_name as user_position_name,
-            genders.gender_id,
-            genders.gender_technical_name,
-            genders.gender_public_name,
-            countries.country_id,
-            countries.country_short_name,
-            countries.country_official_name,
-            countries.country_alpha_2_code,
-            countries.country_alpha_3_code,
-            countries.country_numeric_code,
-            countries.country_code_top_level_domain,
-            roles.role_id,
-            roles.role_technical_name,
-            roles.role_public_name,
-            roles.role_description,
-            organizations.organization_id,
-            organizations.organization_name,
-            organizations.organization_description,
-            organizations.parent_organization_id,
-            organizations.parent_organization_name,
-            organizations.parent_organization_description,
-            organizations.root_organization_id,
-            organizations.root_organization_name,
-            organizations.root_organization_description
+            message_text,
+            message_created_date_time
         from
-            chat_rooms_users_relationship
-        left join users on
-            chat_rooms_users_relationship.user_id = users.user_id
-        left join internal_users on
-            users.internal_user_id = internal_users.internal_user_id
-        left join genders on
-            internal_users.gender_id = genders.gender_id
-        left join countries on
-            internal_users.country_id = countries.country_id
-        left join roles on
-            internal_users.role_id = roles.role_id
-        left join organizations on
-            internal_users.organization_id = organizations.organization_id
+            chat_rooms_messages
         where
-            chat_rooms_users_relationship.chat_room_id in ({0})
-        and
-            users.internal_user_id is not null
-        and
-            users.unidentified_user_id is null
-        and
-            users.identified_user_id is null
-        order by
-            chat_rooms_users_relationship.chat_room_id,
-            chat_rooms_users_relationship.entry_created_date_time desc;
-        """.format(", ".join("'{0}'".format(item) for item in chat_rooms_ids))
+            chat_room_id = %(chat_room_id)s
+        limit 1;
+        """
 
-        # Execute a previously prepared SQL query.
+        # Execute the CQL query dynamically, in a convenient and safe way.
         try:
-            cursor.execute(statement)
+            last_message_data = cassandra_connection.execute(cql_statement, cql_arguments).one()
         except Exception as error:
             logger.error(error)
-            sys.exit(1)
+            raise Exception(error)
 
-        # After the successful execution of the query commit your changes to the database.
-        postgresql_connection.commit()
+        # Analyze the data about chat room message received from the database.
+        last_message_content = {}
+        if last_message_data:
+            last_message_content["lastMessageContent"] = last_message_data["message_text"]
+            last_message_content["lastMessageDateTime"] = last_message_data["message_created_date_time"].isoformat()
+            last_messages_data[record["chat_room_id"]] = last_message_content
 
-        # The data type is the class 'psycopg2.extras.RealDictRow'.
-        operators_entries = cursor.fetchall()
+    # Put the result of the function in the queue.
+    queue.put({"last_messages_data": last_messages_data})
 
-        # The cursor will be unusable from this point forward.
-        cursor.close()
+    # Return nothing.
+    return None
 
-        # Analyze the data about internal users received from the database.
-        operators_storage = dict()
-        if operators_entries is not None:
-            for entry in operators_entries:
-                operator = dict()
-                gender = dict()
-                country = dict()
-                role = dict()
-                organization = dict()
-                for key, value in entry.items():
-                    if "_id" in key and value is not None:
-                        value = str(value)
-                    if "gender_" in key:
-                        gender[utils.camel_case(key)] = value
-                    elif "country_" in key:
-                        country[utils.camel_case(key)] = value
-                    elif "role_" in key:
-                        role[utils.camel_case(key)] = value
-                    elif "organization_" in key:
-                        organization[utils.camel_case(key)] = value
-                    elif key == "chat_room_id":
-                        continue
-                    else:
-                        operator[utils.camel_case(key)] = value
-                operator["gender"] = gender
-                operator["country"] = country
-                operator["role"] = role
-                operator["organization"] = organization
-                operators_storage[entry["chat_room_id"]] = operator
 
-        # Prepare the final data that will be sent in the response.
-        chat_room = dict()
-        for entry in aggregated_data_entries:
-            for key, value in entry.items():
-                if ("_id" in key or "_date_time" in key) and value is not None:
-                    value = str(value)
-                chat_room[utils.camel_case(key)] = value
-            chat_room["operator"] = operators_storage.get(entry["chat_room_id"], None)
-            if chat_rooms_last_messages_storage.__contains__(entry["chat_room_id"]):
-                chat_room = {**chat_room, **chat_rooms_last_messages_storage[entry["chat_room_id"]]}
-            chat_rooms.append(chat_room)
+def analyze_and_format_aggregated_data(**kwargs) -> None:
+    # Check if the input dictionary has all the necessary keys.
+    try:
+        aggregated_data = kwargs["aggregated_data"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        last_operators_data = kwargs["last_operators_data"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        last_messages_data = kwargs["last_messages_data"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
 
-    # Return the list of aggregated data as the response.
+    # Format the aggregated data.
+    chat_room = {}
+    for record in aggregated_data:
+        for key, value in record.items():
+            if key.endswith("_date_time") and value is not None:
+                value = value.isoformat()
+            chat_room[utils.camel_case(key)] = value
+        chat_room["operator"] = last_operators_data.get(record["chat_room_id"], None)
+        if last_messages_data.__contains__(record["chat_room_id"]):
+            chat_room = {**chat_room, **last_messages_data[record["chat_room_id"]]}
+        chat_rooms.append(chat_room)
+
+    # Return nothing.
+    return None
+
+
+def lambda_handler(event, context):
+    """
+    :param event: The AWS Lambda function uses this parameter to pass in event data to the handler.
+    :param context: The AWS Lambda function uses this parameter to provide runtime information to your handler.
+    """
+    # Run several initialization functions in parallel.
+    results_of_tasks = run_multithreading_tasks([
+        {
+            "function_object": check_input_arguments,
+            "function_arguments": {
+                "event": event
+            }
+        },
+        {
+            "function_object": reuse_or_recreate_postgresql_connection,
+            "function_arguments": {}
+        },
+        {
+            "function_object": reuse_or_recreate_cassandra_connection,
+            "function_arguments": {}
+        }
+    ])
+
+    # Define the input arguments of the AWS Lambda function.
+    input_arguments = results_of_tasks["input_arguments"]
+    channel_technical_id = input_arguments["channel_technical_id"]
+    channel_type_name = input_arguments["channel_type_name"]
+    client_id = input_arguments["client_id"]
+    limit = input_arguments["limit"]
+    offset = (input_arguments["offset"] - 1) * limit
+
+    # Define the instances of the database connections.
+    postgresql_connection = results_of_tasks["postgresql_connection"]
+    cassandra_connection = results_of_tasks["cassandra_connection"]
+    set_cassandra_keyspace(cassandra_connection=cassandra_connection)
+
+    # Define the variable that stores information about aggregated data.
+    aggregated_data = get_aggregated_data(
+        postgresql_connection=postgresql_connection,
+        sql_arguments={
+            "client_id": client_id,
+            "channel_technical_id": channel_technical_id,
+            "channel_type_name": channel_type_name,
+            "offset": offset,
+            "limit": limit
+        }
+    )
+
+    # Check if there is aggregated data.
+    if aggregated_data:
+        # Define the list of chat rooms ids.
+        chat_rooms_ids = [item["chat_room_id"] for item in aggregated_data]
+
+        # Run several initialization functions in parallel.
+        results_of_tasks = run_multithreading_tasks([
+            {
+                "function_object": get_last_messages_data,
+                "function_arguments": {
+                    "cassandra_connection": cassandra_connection,
+                    "cql_arguments": {
+                        "aggregated_data": aggregated_data
+                    }
+                }
+            },
+            {
+                "function_object": get_last_operators_data,
+                "function_arguments": {
+                    "postgresql_connection": postgresql_connection,
+                    "sql_arguments": {
+                        "chat_rooms_ids": chat_rooms_ids
+                    }
+                }
+            }
+        ])
+
+        # Define a few necessary variables that will be used in the future.
+        last_operators_data = results_of_tasks["last_operators_data"]
+        last_messages_data = results_of_tasks["last_messages_data"]
+
+        # Analyze and format all aggregated data obtained earlier from databases.
+        analyze_and_format_aggregated_data(
+            aggregated_data=aggregated_data,
+            last_operators_data=last_operators_data,
+            last_messages_data=last_messages_data
+        )
+
+    # Return the list of client's chat rooms.
     return chat_rooms
