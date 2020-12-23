@@ -110,7 +110,7 @@ def check_input_arguments(**kwargs) -> None:
         "input_arguments": {
             "channel_technical_id": input_arguments.get("channelTechnicalId", None),
             "channel_type_name": input_arguments.get("channelTypeName", None),
-            "clientId": input_arguments.get("clientId", None),
+            "client_id": input_arguments.get("clientId", None),
             "offset": input_arguments.get("currentPageNumber", None),
             "limit": input_arguments.get("recordsNumber", None),
         }
