@@ -520,7 +520,7 @@ def lambda_handler(event, context):
     # Check if there is aggregated data.
     if aggregated_data:
         # Define the list of chat rooms ids.
-        chat_rooms_ids = [item["chat_room_id"] for item in aggregated_data]
+        chat_rooms_ids = [str(item["chat_room_id"]) for item in aggregated_data]
 
         # Run several initialization functions in parallel.
         results_of_tasks = run_multithreading_tasks([
