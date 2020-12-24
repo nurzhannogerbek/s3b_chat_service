@@ -1,7 +1,6 @@
 import logging
 import os
 from psycopg2.extras import RealDictCursor
-from cassandra.cluster import Session
 from functools import wraps
 from typing import *
 import uuid
@@ -152,30 +151,6 @@ def reuse_or_recreate_cassandra_connection(queue: Queue) -> None:
             logger.error(error)
             raise Exception("Unable to connect to the Cassandra database.")
     queue.put({"cassandra_connection": CASSANDRA_CONNECTION})
-    return None
-
-
-def set_cassandra_keyspace(cassandra_connection: Session) -> None:
-    # This peace of code fix ERROR NoHostAvailable: ("Unable to complete the operation against any hosts").
-    successful_operation = False
-    while not successful_operation:
-        try:
-            cassandra_connection.set_keyspace(CASSANDRA_KEYSPACE_NAME)
-            successful_operation = True
-        except Exception as error:
-            try:
-                cassandra_connection = databases.create_cassandra_connection(
-                    CASSANDRA_USERNAME,
-                    CASSANDRA_PASSWORD,
-                    CASSANDRA_HOST,
-                    CASSANDRA_PORT,
-                    CASSANDRA_LOCAL_DC
-                )
-            except Exception as error:
-                logger.error(error)
-                raise Exception(error)
-
-    # Return nothing.
     return None
 
 
@@ -677,7 +652,27 @@ def lambda_handler(event, context):
     # Define the instances of the database connections.
     postgresql_connection = results_of_tasks["postgresql_connection"]
     cassandra_connection = results_of_tasks["cassandra_connection"]
-    set_cassandra_keyspace(cassandra_connection=cassandra_connection)
+
+    # This statement must fix ERROR NoHostAvailable: ('Unable to complete the operation against any hosts').
+    success = False
+    while not success:
+        try:
+            cassandra_connection.set_keyspace(CASSANDRA_KEYSPACE_NAME)
+            success = True
+        except Exception as error:
+            try:
+                cassandra_connection = databases.create_cassandra_connection(
+                    CASSANDRA_USERNAME,
+                    CASSANDRA_PASSWORD,
+                    CASSANDRA_HOST,
+                    CASSANDRA_PORT,
+                    CASSANDRA_LOCAL_DC
+                )
+                global POSTGRESQL_CONNECTION
+                POSTGRESQL_CONNECTION = cassandra_connection
+            except Exception as error:
+                logger.error(error)
+                raise Exception(error)
 
     # Run several functions in parallel to get all necessary data.
     results_of_tasks = run_multithreading_tasks([

@@ -3,7 +3,6 @@ import os
 from psycopg2.extras import RealDictCursor
 from functools import wraps
 from typing import *
-import uuid
 from threading import Thread
 from queue import Queue
 import databases
