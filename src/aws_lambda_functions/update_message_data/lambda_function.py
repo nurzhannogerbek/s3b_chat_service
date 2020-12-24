@@ -662,7 +662,7 @@ def get_chat_room_messages(**kwargs) -> List[Dict[AnyStr, Any]]:
     # Get information of each message individually.
     for message_id in messages_ids:
         # Add or update the value of the argument.
-        cql_arguments["message_id"] = uuid.UUID(message_id)
+        cql_arguments["message_id"] = uuid.UUID(message_id, version=1)
 
         # Execute the CQL query dynamically, in a convenient and safe way.
         try:
