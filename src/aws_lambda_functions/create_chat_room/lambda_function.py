@@ -96,12 +96,12 @@ def check_input_arguments(**kwargs) -> None:
     required_arguments = ["channelTechnicalId", "channelTypeName", "clientId", "lastMessageContent"]
     for argument_name, argument_value in input_arguments.items():
         if argument_name in required_arguments and argument_value is None:
-            raise Exception("The '{0}' argument can't be None/Null/Undefined.".format(utils.camel_case(argument_name)))
+            raise Exception("The '{0}' argument can't be None/Null/Undefined.".format(argument_name))
         if argument_name == "clientId":
             try:
                 uuid.UUID(argument_value)
             except ValueError:
-                raise Exception("The '{0}' argument format is not UUID.".format(utils.camel_case(argument_name)))
+                raise Exception("The '{0}' argument format is not UUID.".format(argument_name))
 
     # Put the result of the function in the queue.
     queue.put({
