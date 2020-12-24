@@ -508,6 +508,10 @@ def lambda_handler(event, context):
     cassandra_connection = results_of_tasks["cassandra_connection"]
     set_cassandra_keyspace(cassandra_connection=cassandra_connection)
 
+    # Clear the value of the global variable.
+    global chat_rooms
+    chat_rooms = []
+
     # Define the variable that stores information about aggregated data.
     aggregated_data = get_aggregated_data(
         postgresql_connection=postgresql_connection,

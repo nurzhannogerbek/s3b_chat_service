@@ -587,6 +587,10 @@ def lambda_handler(event, context):
     # Define the instances of the database connections.
     postgresql_connection = results_of_tasks["postgresql_connection"]
 
+    # Clear the value of the global variable.
+    global chat_room
+    chat_room = {}
+
     # Run several functions in parallel to get all the necessary data from different database tables.
     results_of_tasks = run_multithreading_tasks([
         {
