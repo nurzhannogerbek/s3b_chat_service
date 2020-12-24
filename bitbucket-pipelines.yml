@@ -81,48 +81,48 @@ deploy:
                   'ParameterValue': '${CASSANDRA_HOST}'
                 },
                 {
-                  "ParameterKey": "CassandraPort",
-                  "ParameterValue": "${CASSANDRA_PORT}"
+                  'ParameterKey': 'CassandraPort',
+                  'ParameterValue': '${CASSANDRA_PORT}'
                 },
                 {
-                  "ParameterKey": "CassandraLocalDC",
-                  "ParameterValue": "${CASSANDRA_LOCAL_DC}"
+                  'ParameterKey': 'CassandraLocalDC',
+                  'ParameterValue': '${CASSANDRA_LOCAL_DC}'
                 },
                 {
-                  "ParameterKey": "CassandraKeyspaceName",
-                  "ParameterValue": "${CASSANDRA_KEYSPACE_NAME}"
+                  'ParameterKey': 'CassandraKeyspaceName',
+                  'ParameterValue': '${CASSANDRA_KEYSPACE_NAME}'
                 },
                 {
-                  "ParameterKey": "PostgreSQLUsername",
-                  "ParameterValue": "${POSTGRESQL_USERNAME}"
+                  'ParameterKey': 'PostgreSQLUsername',
+                  'ParameterValue': '${POSTGRESQL_USERNAME}'
                 },
                 {
-                  "ParameterKey": "PostgreSQLPassword",
-                  "ParameterValue": "${POSTGRESQL_PASSWORD}"
+                  'ParameterKey': 'PostgreSQLPassword',
+                  'ParameterValue': '${POSTGRESQL_PASSWORD}'
                 },
                 {
-                  "ParameterKey": "PostgreSQLHost",
-                  "ParameterValue": "${POSTGRESQL_HOST}"
+                  'ParameterKey': 'PostgreSQLHost',
+                  'ParameterValue': '${POSTGRESQL_HOST}'
                 },
                 {
-                  "ParameterKey": "PostgreSQLPort",
-                  "ParameterValue": "${POSTGRESQL_PORT}"
+                  'ParameterKey': 'PostgreSQLPort',
+                  'ParameterValue': '${POSTGRESQL_PORT}'
                 },
                 {
-                  "ParameterKey": "PostgreSQLDBName",
-                  "ParameterValue": "${POSTGRESQL_DB_NAME}"
+                  'ParameterKey': 'PostgreSQLDBName',
+                  'ParameterValue': '${POSTGRESQL_DB_NAME}'
                 },
                 {
-                  "ParameterKey": "EnvironmentName",
-                  "ParameterValue": "${ENVIRONMENT_NAME}"
+                  'ParameterKey': 'EnvironmentName',
+                  'ParameterValue': '${ENVIRONMENT_NAME}'
                 },
                 {
-                  "ParameterKey": "DatabasesLayerARN",
-                  "ParameterValue": "${DATABASES_LAYER_ARN}"
+                  'ParameterKey': 'DatabasesLayerARN',
+                  'ParameterValue':'${DATABASES_LAYER_ARN}'
                 },
                 {
-                  "ParameterKey": "UtilsLayerARN",
-                  "ParameterValue": "${UTILS_LAYER_ARN}"
+                  'ParameterKey': 'UtilsLayerARN',
+                  'ParameterValue': '${UTILS_LAYER_ARN}'
                 }
               ]
             WAIT: 'true'
