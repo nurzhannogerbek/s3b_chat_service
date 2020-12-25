@@ -505,8 +505,8 @@ def lambda_handler(event, context):
                     CASSANDRA_PORT,
                     CASSANDRA_LOCAL_DC
                 )
-                global POSTGRESQL_CONNECTION
-                POSTGRESQL_CONNECTION = cassandra_connection
+                global CASSANDRA_CONNECTION
+                CASSANDRA_CONNECTION = cassandra_connection
             except Exception as error:
                 logger.error(error)
                 raise Exception(error)
