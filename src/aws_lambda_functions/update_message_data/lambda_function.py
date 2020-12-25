@@ -756,7 +756,7 @@ def lambda_handler(event, context):
     )
 
     # Define a few necessary variables that will be used in the future.
-    channel_id = uuid.UUID(aggregated_data["channel_id"])
+    channel_id = aggregated_data["channel_id"]
     operator_id = uuid.UUID(aggregated_data["operator_id"]) if aggregated_data["operator_id"] else None
     organizations_ids = aggregated_data["organizations_ids"]
 
@@ -768,7 +768,7 @@ def lambda_handler(event, context):
                 "chat_room_status": chat_room_status,
                 "is_client": is_client,
                 "chat_room_id": uuid.UUID(chat_room_id),
-                "channel_id": channel_id,
+                "channel_id": uuid.UUID(channel_id),
                 "operator_id": operator_id,
                 "organizations_ids": organizations_ids,
                 "messages_number": len(messages_ids)
@@ -780,7 +780,7 @@ def lambda_handler(event, context):
             cql_arguments={
                 "chat_room_status": chat_room_status,
                 "chat_room_id": uuid.UUID(chat_room_id),
-                "channel_id": channel_id,
+                "channel_id": uuid.UUID(channel_id),
                 "operator_id": operator_id,
                 "organization_id": uuid.UUID(organizations_ids[0])
             }
@@ -811,6 +811,7 @@ def lambda_handler(event, context):
     # Create the response structure and return it.
     return {
         "chatRoomId": chat_room_id,
+        "channelId": channel_id,
         "chatRoomStatus": chat_room_status,
         "chatRoomMessages": chat_room_messages,
         "unreadMessagesNumber": unread_messages_number
