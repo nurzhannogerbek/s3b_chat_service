@@ -432,8 +432,8 @@ def analyze_and_format_aggregated_data(**kwargs) -> None:
         raise Exception(error)
 
     # Format the aggregated data.
-    chat_room = {}
     for record in aggregated_data:
+        chat_room = {}
         for key, value in record.items():
             if key.endswith("_date_time") and value is not None:
                 value = value.isoformat()
