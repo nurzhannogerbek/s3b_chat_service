@@ -91,7 +91,7 @@ def check_input_arguments(**kwargs) -> None:
         raise Exception(error)
 
     # Check the format and values of required arguments in the list of input arguments.
-    required_arguments = ["chatRoomId", "operatorId", "clientId"]
+    required_arguments = ["chatRoomId", "operatorId", "clientId", "roleTechnicalName"]
     for argument_name, argument_value in input_arguments.items():
         if argument_name not in required_arguments:
             raise Exception("The '{0}' argument doesn't exist.".format(argument_name))
@@ -108,7 +108,8 @@ def check_input_arguments(**kwargs) -> None:
         "input_arguments": {
             "chat_room_id": input_arguments.get("chatRoomId", None),
             "operator_id": input_arguments.get("operatorId", None),
-            "client_id": input_arguments.get("clientId", None)
+            "client_id": input_arguments.get("clientId", None),
+            "role_technical_name": input_arguments.get("roleTechnicalName", None)
         }
     })
 
@@ -169,7 +170,7 @@ def postgresql_wrapper(function):
 
 
 @postgresql_wrapper
-def get_aggregated_data(**kwargs) -> None:
+def get_aggregated_data(**kwargs) -> Dict[AnyStr, Any]:
     # Check if the input dictionary has all the necessary keys.
     try:
         cursor = kwargs["cursor"]
@@ -178,11 +179,6 @@ def get_aggregated_data(**kwargs) -> None:
         raise Exception(error)
     try:
         sql_arguments = kwargs["sql_arguments"]
-    except KeyError as error:
-        logger.error(error)
-        raise Exception(error)
-    try:
-        queue = kwargs["queue"]
     except KeyError as error:
         logger.error(error)
         raise Exception(error)
@@ -212,65 +208,8 @@ def get_aggregated_data(**kwargs) -> None:
         logger.error(error)
         raise Exception(error)
 
-    # Put the result of the function in the queue.
-    queue.put({"aggregated_data": cursor.fetchone()})
-
-    # Return nothing.
-    return None
-
-
-@postgresql_wrapper
-def get_role_technical_name(**kwargs) -> None:
-    # Check if the input dictionary has all the necessary keys.
-    try:
-        cursor = kwargs["cursor"]
-    except KeyError as error:
-        logger.error(error)
-        raise Exception(error)
-    try:
-        sql_arguments = kwargs["sql_arguments"]
-    except KeyError as error:
-        logger.error(error)
-        raise Exception(error)
-    try:
-        queue = kwargs["queue"]
-    except KeyError as error:
-        logger.error(error)
-        raise Exception(error)
-
-    # Prepare the SQL query to get the technical name of the operator's role.
-    sql_statement = """
-    select
-        roles.role_technical_name::text
-    from
-        users
-    left join internal_users on
-        users.internal_user_id = internal_users.internal_user_id
-    left join roles on
-        internal_users.role_id = roles.role_id
-    where
-        users.user_id = %(operator_id)s
-    and
-        users.internal_user_id is not null
-    and
-        users.unidentified_user_id is null
-    and
-        users.identified_user_id is null
-    limit 1;
-    """
-
-    # Execute the SQL query dynamically, in a convenient and safe way.
-    try:
-        cursor.execute(sql_statement, sql_arguments)
-    except Exception as error:
-        logger.error(error)
-        raise Exception(error)
-
-    # Put the result of the function in the queue.
-    queue.put({"role_technical_name": cursor.fetchone()["role_technical_name"]})
-
-    # Return nothing.
-    return None
+    # Create the response structure and return it.
+    return cursor.fetchone()
 
 
 def get_last_message_data(**kwargs) -> Dict[AnyStr, Any]:
@@ -632,6 +571,7 @@ def lambda_handler(event, context):
     chat_room_id = input_arguments["chat_room_id"]
     operator_id = input_arguments["operator_id"]
     client_id = input_arguments["client_id"]
+    role_technical_name = input_arguments["role_technical_name"]
 
     # Define the instances of the database connections.
     postgresql_connection = results_of_tasks["postgresql_connection"]
@@ -658,42 +598,22 @@ def lambda_handler(event, context):
                 logger.error(error)
                 raise Exception(error)
 
-    # Run several initialization functions in parallel.
-    results_of_tasks = run_multithreading_tasks([
-        {
-            "function_object": get_aggregated_data,
-            "function_arguments": {
-                "postgresql_connection": postgresql_connection,
-                "sql_arguments": {
-                    "chat_room_id": chat_room_id
-                }
-            }
-        },
-        {
-            "function_object": get_role_technical_name,
-            "function_arguments": {
-                "postgresql_connection": postgresql_connection,
-                "sql_arguments": {
-                    "operator_id": operator_id
-                }
-            }
+    # Define the variable that stores information about aggregated data.
+    aggregated_data = get_aggregated_data(
+        postgresql_connection=postgresql_connection,
+        sql_arguments={
+            "chat_room_id": chat_room_id
         }
-    ])
-
-    # Define a few necessary variables that will be used in the future.
-    aggregated_data = results_of_tasks["aggregated_data"]
-    channel_id = aggregated_data["channel_id"]
-    chat_room_status = aggregated_data["chat_room_status"]
-    organizations_ids = aggregated_data["organizations_ids"]
-    role_technical_name = results_of_tasks["role_technical_name"]
+    )
 
     # Return the message to the client that there is no data for the chat room.
     if not aggregated_data:
         raise Exception("The chat room data was not found in the database.")
 
-    # Return the message to the client that there is no data for the operator.
-    if not role_technical_name:
-        raise Exception("The operator data was not found in the database.")
+    # Define a few necessary variables that will be used in the future.
+    channel_id = aggregated_data["channel_id"]
+    chat_room_status = aggregated_data["chat_room_status"]
+    organizations_ids = aggregated_data["organizations_ids"]
 
     # Check the value of the chat room status.
     if chat_room_status == "completed":
