@@ -169,7 +169,7 @@ def postgresql_wrapper(function):
 
 
 @postgresql_wrapper
-def get_aggregated_data(**kwargs) -> Dict[AnyStr, Any]:
+def get_aggregated_data(**kwargs) -> None:
     # Check if the input dictionary has all the necessary keys.
     try:
         cursor = kwargs["cursor"]
@@ -181,11 +181,17 @@ def get_aggregated_data(**kwargs) -> Dict[AnyStr, Any]:
     except KeyError as error:
         logger.error(error)
         raise Exception(error)
+    try:
+        queue = kwargs["queue"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
 
     # Prepare the SQL query to get a list of departments that serve a specific channel.
     sql_statement = """
     select
         chat_rooms.channel_id::text,
+        chat_rooms.chat_room_status::text,
         array_agg(distinct channels_organizations_relationship.organization_id)::text[] as organizations_ids
     from
         chat_rooms
@@ -194,7 +200,8 @@ def get_aggregated_data(**kwargs) -> Dict[AnyStr, Any]:
     where
         chat_rooms.chat_room_id = %(chat_room_id)s
     group by
-        chat_rooms.channel_id
+        chat_rooms.channel_id,
+        chat_rooms.chat_room_status
     limit 1;
     """
 
@@ -205,8 +212,65 @@ def get_aggregated_data(**kwargs) -> Dict[AnyStr, Any]:
         logger.error(error)
         raise Exception(error)
 
-    # Create the response structure and return it.
-    return cursor.fetchone()
+    # Put the result of the function in the queue.
+    queue.put({"aggregated_data": cursor.fetchone()})
+
+    # Return nothing.
+    return None
+
+
+@postgresql_wrapper
+def get_role_technical_name(**kwargs) -> None:
+    # Check if the input dictionary has all the necessary keys.
+    try:
+        cursor = kwargs["cursor"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        sql_arguments = kwargs["sql_arguments"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        queue = kwargs["queue"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+
+    # Prepare the SQL query to get the technical name of the operator's role.
+    sql_statement = """
+    select
+        roles.role_technical_name::text
+    from
+        users
+    left join internal_users on
+        users.internal_user_id = internal_users.internal_user_id
+    left join roles on
+        internal_users.role_id = roles.role_id
+    where
+        users.user_id = %(operator_id)s
+    and
+        users.internal_user_id is not null
+    and
+        users.unidentified_user_id is null
+    and
+        users.identified_user_id is null
+    limit 1;
+    """
+
+    # Execute the SQL query dynamically, in a convenient and safe way.
+    try:
+        cursor.execute(sql_statement, sql_arguments)
+    except Exception as error:
+        logger.error(error)
+        raise Exception(error)
+
+    # Put the result of the function in the queue.
+    queue.put({"role_technical_name": cursor.fetchone()["role_technical_name"]})
+
+    # Return nothing.
+    return None
 
 
 def get_last_message_data(**kwargs) -> Dict[AnyStr, Any]:
@@ -594,21 +658,48 @@ def lambda_handler(event, context):
                 logger.error(error)
                 raise Exception(error)
 
-    # Define the variable that stores information about aggregated data.
-    aggregated_data = get_aggregated_data(
-        postgresql_connection=postgresql_connection,
-        sql_arguments={
-            "chat_room_id": chat_room_id
+    # Run several initialization functions in parallel.
+    results_of_tasks = run_multithreading_tasks([
+        {
+            "function_object": get_aggregated_data,
+            "function_arguments": {
+                "postgresql_connection": postgresql_connection,
+                "sql_arguments": {
+                    "chat_room_id": chat_room_id
+                }
+            }
+        },
+        {
+            "function_object": get_role_technical_name,
+            "function_arguments": {
+                "postgresql_connection": postgresql_connection,
+                "sql_arguments": {
+                    "operator_id": operator_id
+                }
+            }
         }
-    )
+    ])
+
+    # Define a few necessary variables that will be used in the future.
+    aggregated_data = results_of_tasks["aggregated_data"]
+    channel_id = aggregated_data["channel_id"]
+    chat_room_status = aggregated_data["chat_room_status"]
+    organizations_ids = aggregated_data["organizations_ids"]
+    role_technical_name = results_of_tasks["role_technical_name"]
 
     # Return the message to the client that there is no data for the chat room.
     if not aggregated_data:
         raise Exception("The chat room data was not found in the database.")
 
-    # Define a few necessary variables that will be used in the future.
-    channel_id = aggregated_data["channel_id"]
-    organizations_ids = aggregated_data["organizations_ids"]
+    # Return the message to the client that there is no data for the operator.
+    if not role_technical_name:
+        raise Exception("The operator data was not found in the database.")
+
+    # Check the value of the chat room status.
+    if chat_room_status == "completed":
+        raise Exception("You can't assign the operator to the completed chat room!")
+    elif chat_room_status == "accepted" and role_technical_name == "operator":
+        raise Exception("Permission denied. You can't assign the operator to the chat room!")
 
     # Define the variable that stores information about last message data of the completed chat room.
     last_message_data = get_last_message_data(
