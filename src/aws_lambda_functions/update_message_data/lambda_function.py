@@ -228,24 +228,31 @@ def get_aggregated_data(**kwargs) -> Dict[AnyStr, Any]:
         sql_statement = """
         select
             chat_rooms.channel_id::text,
+            channel_types.channel_type_name::text,
             null as operator_id,
             array_agg(distinct channels_organizations_relationship.organization_id)::text[] as organizations_ids
         from
             chat_rooms
         left join channels_organizations_relationship on
             chat_rooms.channel_id = channels_organizations_relationship.channel_id
+        left join channels on
+            chat_rooms.channel_id = channels.channel_id
+        left join channel_types on
+            channels.channel_type_id = channel_types.channel_type_id
         where
             chat_rooms.chat_room_id = %(chat_room_id)s
         and
             chat_rooms.chat_room_status = 'non_accepted'
         group by
-            chat_rooms.channel_id
+            chat_rooms.channel_id,
+            channel_types.channel_type_name
         limit 1;
         """
     elif chat_room_status == "accepted":
         sql_statement = """
         select
             chat_rooms.channel_id::text,
+            channel_types.channel_type_name::text,
             users.user_id::text as operator_id,
             array_agg(distinct channels_organizations_relationship.organization_id)::text[] as organizations_ids
         from
@@ -256,6 +263,10 @@ def get_aggregated_data(**kwargs) -> Dict[AnyStr, Any]:
             chat_rooms_users_relationship.user_id = users.user_id
         left join channels_organizations_relationship on
             chat_rooms.channel_id = channels_organizations_relationship.channel_id
+        left join channels on
+            chat_rooms.channel_id = channels.channel_id
+        left join channel_types on
+            channels.channel_type_id = channel_types.channel_type_id
         where
             chat_rooms.chat_room_id = %(chat_room_id)s
         and
@@ -268,6 +279,7 @@ def get_aggregated_data(**kwargs) -> Dict[AnyStr, Any]:
             users.unidentified_user_id is null
         group by
             chat_rooms.channel_id,
+            channel_types.channel_type_name,
             users.user_id,
             chat_rooms_users_relationship.entry_created_date_time
         order by
@@ -757,6 +769,7 @@ def lambda_handler(event, context):
 
     # Define a few necessary variables that will be used in the future.
     channel_id = aggregated_data["channel_id"]
+    channel_type_name = aggregated_data["channel_type_name"]
     operator_id = uuid.UUID(aggregated_data["operator_id"]) if aggregated_data["operator_id"] else None
     organizations_ids = aggregated_data["organizations_ids"]
 
@@ -814,5 +827,7 @@ def lambda_handler(event, context):
         "channelId": channel_id,
         "chatRoomStatus": chat_room_status,
         "chatRoomMessages": chat_room_messages,
-        "unreadMessagesNumber": unread_messages_number
+        "unreadMessagesNumber": unread_messages_number,
+        "channelTypeName": channel_type_name,
+        "isClient": is_client
     }
