@@ -160,6 +160,7 @@ def check_input_arguments(**kwargs) -> None:
     except KeyError:
         quoted_message_content_url = None
     local_message_id = input_arguments.get("localMessageId", None)
+    is_client = input_arguments.get("isClient", None)
 
     # Put the result of the function in the queue.
     queue.put({
@@ -176,7 +177,8 @@ def check_input_arguments(**kwargs) -> None:
             "quoted_message_type": quoted_message_type,
             "quoted_message_text": quoted_message_text,
             "quoted_message_content_url": quoted_message_content_url,
-            "local_message_id": local_message_id
+            "local_message_id": local_message_id,
+            "is_client": is_client
         }
     })
 
@@ -457,14 +459,20 @@ def update_last_message_content_data(**kwargs) -> None:
     except KeyError as error:
         logger.error(error)
         raise Exception(error)
+    try:
+        is_client: object = cql_arguments["is_client"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
 
     # Check the status value of the chat room.
     if chat_room_status == "non_accepted":
         # Prepare a request to update the contents of the last message.
-        cql_statement = """
+        cql_statement = f"""
         update
             non_accepted_chat_rooms
         set
+            {"last_message_from_client_date_time = toTimestamp(now())," if is_client else ""}
             last_message_content = %(last_message_content)s,
             last_message_date_time = toTimestamp(now())
         where
@@ -489,10 +497,11 @@ def update_last_message_content_data(**kwargs) -> None:
                 raise Exception(error)
     elif chat_room_status == "accepted":
         # Prepare a request to update the contents of the last message.
-        cql_statement = """
+        cql_statement = f"""
         update
             accepted_chat_rooms
         set
+            {"last_message_from_client_date_time = toTimestamp(now())," if is_client else ""}
             last_message_content = %(last_message_content)s,
             last_message_date_time = toTimestamp(now())
         where
@@ -699,6 +708,7 @@ def lambda_handler(event, context):
     quoted_message_content_url = input_arguments["quoted_message_content_url"]
     local_message_id = input_arguments["local_message_id"]
     last_message_content = message_text
+    is_client = input_arguments["is_client"]
 
     # Run several functions in parallel to create/update/delete all necessary data in different databases tables.
     run_multithreading_tasks([
@@ -733,7 +743,8 @@ def lambda_handler(event, context):
                     "chat_room_id": chat_room_id,
                     "operator_id": operator_id,
                     "channel_id": uuid.UUID(channel_id),
-                    "last_message_content": last_message_content
+                    "last_message_content": last_message_content,
+                    "is_client": is_client
                 }
             }
         }

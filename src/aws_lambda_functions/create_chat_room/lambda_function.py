@@ -432,7 +432,8 @@ def create_non_accepted_chat_room(**kwargs) -> None:
         client_id,
         last_message_content,
         last_message_date_time,
-        unread_messages_number
+        unread_messages_number,
+        last_message_from_client_date_time
     ) values (
         %(organization_id)s,
         %(channel_id)s,
@@ -440,7 +441,8 @@ def create_non_accepted_chat_room(**kwargs) -> None:
         %(client_id)s,
         %(last_message_content)s,
         %(last_message_date_time)s,
-        0
+        0,
+        %(last_message_from_client_date_time)s
     );
     """
 
@@ -720,6 +722,7 @@ def lambda_handler(event, context):
 
     # Define the current time.
     last_message_date_time = datetime.now()
+    last_message_from_client_date_time = datetime.now()
 
     # Run several functions in parallel to create/update/delete all necessary data in different databases tables.
     results_of_tasks = run_multithreading_tasks([
@@ -743,7 +746,8 @@ def lambda_handler(event, context):
                     "chat_room_id": uuid.UUID(chat_room_id),
                     "client_id": uuid.UUID(client_id),
                     "last_message_content": last_message_content,
-                    "last_message_date_time": last_message_date_time
+                    "last_message_date_time": last_message_date_time,
+                    "last_message_from_client_date_time": last_message_from_client_date_time
                 }
             }
         },
@@ -800,5 +804,6 @@ def lambda_handler(event, context):
         "organizationsIds": organizations_ids,
         "lastMessageContent": last_message_content,
         "lastMessageDateTime": last_message_date_time.isoformat(),
+        "lastMessageFromClientDateTime": last_message_from_client_date_time.isoformat(),
         "unreadMessagesNumber": 1
     }

@@ -210,7 +210,8 @@ def get_accepted_chat_rooms_data(**kwargs) -> List[Dict[AnyStr, Any]]:
             client_id,
             last_message_content,
             last_message_date_time,
-            unread_messages_number
+            unread_messages_number,
+            last_message_from_client_date_time
         from
             accepted_chat_rooms
         where
@@ -230,7 +231,8 @@ def get_accepted_chat_rooms_data(**kwargs) -> List[Dict[AnyStr, Any]]:
             client_id,
             last_message_content,
             last_message_date_time,
-            unread_messages_number
+            unread_messages_number,
+            last_message_from_client_date_time
         from
             accepted_chat_rooms
         where
