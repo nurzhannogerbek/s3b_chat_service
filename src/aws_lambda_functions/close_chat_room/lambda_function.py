@@ -189,7 +189,8 @@ def get_accepted_chat_room_data(**kwargs) -> Dict[AnyStr, Any]:
         chat_room_id,
         client_id,
         last_message_content,
-        last_message_date_time
+        last_message_date_time,
+        last_message_from_client_date_time
     from
         accepted_chat_rooms
     where
@@ -234,7 +235,8 @@ def create_completed_chat_room(**kwargs) -> None:
         client_id,
         last_message_content,
         last_message_date_time,
-        unread_messages_number
+        unread_messages_number,
+        last_message_from_client_date_time
     ) values (
         %(operator_id)s,
         %(channel_id)s,
@@ -242,7 +244,8 @@ def create_completed_chat_room(**kwargs) -> None:
         %(client_id)s,
         %(last_message_content)s,
         %(last_message_date_time)s,
-        0
+        0,
+        %(last_message_from_client_date_time)s
     );
     """
 
@@ -533,7 +536,8 @@ def lambda_handler(event, context):
                     "chat_room_id": accepted_chat_room_data["chat_room_id"],
                     "client_id": accepted_chat_room_data["client_id"],
                     "last_message_content": accepted_chat_room_data["last_message_content"],
-                    "last_message_date_time": accepted_chat_room_data["last_message_date_time"]
+                    "last_message_date_time": accepted_chat_room_data["last_message_date_time"],
+                    "last_message_from_client_date_time": accepted_chat_room_data["last_message_from_client_date_time"]
                 }
             }
         },

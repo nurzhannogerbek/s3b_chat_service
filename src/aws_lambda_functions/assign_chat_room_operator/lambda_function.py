@@ -229,7 +229,8 @@ def get_last_message_data(**kwargs) -> Dict[AnyStr, Any]:
     cql_statement = """
     select
         last_message_content,
-        last_message_date_time
+        last_message_date_time,
+        last_message_from_client_date_time
     from
         non_accepted_chat_rooms
     where
@@ -274,7 +275,8 @@ def create_accepted_chat_room(**kwargs) -> None:
         client_id,
         last_message_content,
         last_message_date_time,
-        unread_messages_number
+        unread_messages_number,
+        last_message_from_client_date_time
     ) values (
         %(operator_id)s,
         %(channel_id)s,
@@ -282,7 +284,8 @@ def create_accepted_chat_room(**kwargs) -> None:
         %(client_id)s,
         %(last_message_content)s,
         %(last_message_date_time)s,
-        0
+        0,
+        %(last_message_from_client_date_time)s
     );
     """
 
@@ -634,6 +637,7 @@ def lambda_handler(event, context):
     # Define a few necessary variables that will be used in the future.
     last_message_content = last_message_data.get("last_message_content", None)
     last_message_date_time = last_message_data.get("last_message_date_time", None)
+    last_message_from_client_date_time = last_message_data.get("last_message_from_client_date_time", None)
 
     # Run several functions in parallel to create/update/delete all necessary data in different databases tables.
     results_of_tasks = run_multithreading_tasks([
@@ -647,7 +651,8 @@ def lambda_handler(event, context):
                     "chat_room_id": uuid.UUID(chat_room_id),
                     "client_id": uuid.UUID(client_id),
                     "last_message_content": last_message_content,
-                    "last_message_date_time": last_message_date_time
+                    "last_message_date_time": last_message_date_time,
+                    "last_message_from_client_date_time": last_message_from_client_date_time
                 }
             }
         },
