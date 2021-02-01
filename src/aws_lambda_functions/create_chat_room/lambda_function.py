@@ -110,7 +110,8 @@ def check_input_arguments(**kwargs) -> None:
             "client_id": input_arguments.get("clientId", None),
             "last_message_content": input_arguments.get("lastMessageContent", None),
             "telegram_chat_id": input_arguments.get("telegramChatId", None),
-            "whatsapp_chat_id": input_arguments.get("whatsappChatId", None)
+            "whatsapp_chat_id": input_arguments.get("whatsappChatId", None),
+            "facebook_messenger_chat_id": input_arguments.get("facebookMessengerChatId", None)
         }
     })
 
@@ -538,6 +539,16 @@ def add_chatbot_attributes(**kwargs) -> None:
             %(whatsapp_chat_id)s
         );
         """
+    elif channel_type_name.lower() == "facebook_messenger".lower() and sql_arguments["facebook_messenger_chat_id"] is not None:
+        sql_statement = """
+        insert into facebook_messenger_chat_rooms (
+            chat_room_id,
+            facebook_messenger_chat_id
+        ) values (
+            %(chat_room_id)s,
+            %(facebook_messenger_chat_id)s
+        );
+        """
     else:
         return None
 
@@ -650,6 +661,7 @@ def lambda_handler(event, context):
     last_message_content = input_arguments["last_message_content"]
     telegram_chat_id = input_arguments["telegram_chat_id"]
     whatsapp_chat_id = input_arguments["whatsapp_chat_id"]
+    facebook_messenger_chat_id = input_arguments["facebook_messenger_chat_id"]
 
     # Define the instances of the database connections.
     postgresql_connection = results_of_tasks["postgresql_connection"]
@@ -769,7 +781,8 @@ def lambda_handler(event, context):
                 "sql_arguments": {
                     "chat_room_id": chat_room_id,
                     "telegram_chat_id": telegram_chat_id,
-                    "whatsapp_chat_id": whatsapp_chat_id
+                    "whatsapp_chat_id": whatsapp_chat_id,
+                    "facebook_messenger_chat_id": facebook_messenger_chat_id
                 }
             }
         },
