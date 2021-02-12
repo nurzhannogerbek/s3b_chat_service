@@ -619,21 +619,19 @@ def get_chat_room_messages(**kwargs) -> List[Dict[AnyStr, Any]]:
         message_id,
         message_author_id,
         message_channel_id,
-        message_content_url,
+        message_content,
         message_created_date_time,
         message_deleted_date_time,
         message_is_delivered,
         message_is_read,
         message_is_sent,
         message_text,
-        message_type,
         message_updated_date_time,
         quoted_message_author_id,
         quoted_message_channel_id,
-        quoted_message_content_url,
+        quoted_message_content,
         quoted_message_id,
-        quoted_message_text,
-        quoted_message_type
+        quoted_message_text
     from
         chat_rooms_messages
     where

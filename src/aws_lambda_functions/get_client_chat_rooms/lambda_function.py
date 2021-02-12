@@ -6,6 +6,7 @@ from typing import *
 import uuid
 from threading import Thread
 from queue import Queue
+import json
 import databases
 import utils
 
@@ -384,6 +385,7 @@ def get_last_messages_data(**kwargs) -> None:
         cql_statement = """
         select
             message_text,
+            message_content,
             message_created_date_time
         from
             chat_rooms_messages
@@ -402,7 +404,11 @@ def get_last_messages_data(**kwargs) -> None:
         # Analyze the data about chat room message received from the database.
         last_message_content = {}
         if last_message_data:
-            last_message_content["lastMessageContent"] = last_message_data["message_text"]
+            last_message_content["lastMessageContent"] = json.dumps({
+                "messageText": last_message_data["message_text"],
+                "messageContent": last_message_data["message_content"],
+
+            })
             last_message_content["lastMessageDateTime"] = last_message_data["message_created_date_time"].isoformat()
             last_messages_data[record["chat_room_id"]] = last_message_content
 

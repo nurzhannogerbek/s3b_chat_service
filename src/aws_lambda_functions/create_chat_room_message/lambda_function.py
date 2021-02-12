@@ -6,6 +6,7 @@ from typing import *
 import uuid
 from threading import Thread
 from queue import Queue
+import json
 import databases
 import utils
 
@@ -115,11 +116,8 @@ def check_input_arguments(**kwargs) -> None:
             raise Exception("The 'messageChannelId' argument format is not UUID.")
     else:
         raise Exception("The 'messageChannelId' argument can't be None/Null/Undefined.")
-    message_type = input_arguments.get("messageType", None)
-    if message_type is None:
-        raise Exception("The 'messageType' argument can't be None/Null/Undefined.")
     message_text = input_arguments.get("messageText", None)
-    message_content_url = input_arguments.get("messageContentUrl", None)
+    message_content = input_arguments.get("messageContent", None)
     try:
         quoted_message_id = input_arguments["quotedMessage"]["messageId"]
     except KeyError:
@@ -148,17 +146,13 @@ def check_input_arguments(**kwargs) -> None:
         except ValueError:
             raise Exception("The 'quotedMessageChannelId' argument format is not UUID.")
     try:
-        quoted_message_type = input_arguments["quotedMessage"]["messageType"]
-    except KeyError:
-        quoted_message_type = None
-    try:
         quoted_message_text = input_arguments["quotedMessage"]["messageText"]
     except KeyError:
         quoted_message_text = None
     try:
-        quoted_message_content_url = input_arguments["quotedMessage"]["messageContentUrl"]
+        quoted_message_content = input_arguments["quotedMessage"]["messageContent"]
     except KeyError:
-        quoted_message_content_url = None
+        quoted_message_content = None
     local_message_id = input_arguments.get("localMessageId", None)
     is_client = input_arguments.get("isClient", None)
 
@@ -168,15 +162,13 @@ def check_input_arguments(**kwargs) -> None:
             "chat_room_id": chat_room_id,
             "message_author_id": message_author_id,
             "message_channel_id": message_channel_id,
-            "message_type": message_type,
             "message_text": message_text,
-            "message_content_url": message_content_url,
+            "message_content": message_content,
             "quoted_message_id": quoted_message_id,
             "quoted_message_author_id": quoted_message_author_id,
             "quoted_message_channel_id": quoted_message_channel_id,
-            "quoted_message_type": quoted_message_type,
             "quoted_message_text": quoted_message_text,
-            "quoted_message_content_url": quoted_message_content_url,
+            "quoted_message_content": quoted_message_content,
             "local_message_id": local_message_id,
             "is_client": is_client
         }
@@ -388,41 +380,37 @@ def create_chat_room_message(**kwargs) -> None:
         message_id,
         message_author_id,
         message_channel_id,
-        message_content_url,
+        message_content,
         message_created_date_time,
         message_deleted_date_time,
         message_is_delivered,
         message_is_read,
         message_is_sent,
         message_text,
-        message_type,
         message_updated_date_time,
         quoted_message_author_id,
         quoted_message_channel_id,
-        quoted_message_content_url,
+        quoted_message_content,
         quoted_message_id,
-        quoted_message_text,
-        quoted_message_type
+        quoted_message_text
     ) values (
         %(chat_room_id)s,
         %(message_id)s,
         %(message_author_id)s,
         %(message_channel_id)s,
-        %(message_content_url)s,
+        %(message_content)s,
         toTimestamp(now()),
         null,
         false,
         false,
         true,
         %(message_text)s,
-        %(message_type)s,
         toTimestamp(now()),
         %(quoted_message_author_id)s,
         %(quoted_message_channel_id)s,
-        %(quoted_message_content_url)s,
+        %(quoted_message_content)s,
         %(quoted_message_id)s,
-        %(quoted_message_text)s,
-        %(quoted_message_type)s
+        %(quoted_message_text)s
     );
     """
 
@@ -546,21 +534,19 @@ def get_chat_room_message_data(**kwargs) -> Dict[AnyStr, Any]:
         message_id,
         message_author_id,
         message_channel_id,
-        message_content_url,
+        message_content,
         message_created_date_time,
         message_deleted_date_time,
         message_is_delivered,
         message_is_read,
         message_is_sent,
         message_text,
-        message_type,
         message_updated_date_time,
         quoted_message_author_id,
         quoted_message_channel_id,
-        quoted_message_content_url,
+        quoted_message_content,
         quoted_message_id,
-        quoted_message_text,
-        quoted_message_type
+        quoted_message_text
     from
         chat_rooms_messages
     where
@@ -688,9 +674,8 @@ def lambda_handler(event, context):
     chat_room_id = uuid.UUID(input_arguments["chat_room_id"])
     message_author_id = uuid.UUID(input_arguments["message_author_id"])
     message_channel_id = uuid.UUID(input_arguments["message_channel_id"])
-    message_type = input_arguments["message_type"]
     message_text = input_arguments["message_text"]
-    message_content_url = input_arguments["message_content_url"]
+    message_content = input_arguments["message_content"]
     if input_arguments["quoted_message_id"]:
         quoted_message_id = uuid.UUID(input_arguments["quoted_message_id"])
     else:
@@ -703,11 +688,13 @@ def lambda_handler(event, context):
         quoted_message_channel_id = uuid.UUID(input_arguments["quoted_message_channel_id"])
     else:
         quoted_message_channel_id = None
-    quoted_message_type = input_arguments["quoted_message_type"]
     quoted_message_text = input_arguments["quoted_message_text"]
-    quoted_message_content_url = input_arguments["quoted_message_content_url"]
+    quoted_message_content = input_arguments["quoted_message_content"]
     local_message_id = input_arguments["local_message_id"]
-    last_message_content = message_text
+    last_message_content = {
+        "messageText": message_text,
+        "messageContent": message_content
+    }
     is_client = input_arguments["is_client"]
 
     # Run several functions in parallel to create/update/delete all necessary data in different databases tables.
@@ -721,15 +708,13 @@ def lambda_handler(event, context):
                     "message_id": message_id,
                     "message_author_id": message_author_id,
                     "message_channel_id": message_channel_id,
-                    "message_content_url": message_content_url,
+                    "message_content": message_content,
                     "message_text": message_text,
-                    "message_type": message_type,
                     "quoted_message_author_id": quoted_message_author_id,
                     "quoted_message_channel_id": quoted_message_channel_id,
-                    "quoted_message_content_url": quoted_message_content_url,
+                    "quoted_message_content": quoted_message_content,
                     "quoted_message_id": quoted_message_id,
-                    "quoted_message_text": quoted_message_text,
-                    "quoted_message_type": quoted_message_type
+                    "quoted_message_text": quoted_message_text
                 }
             }
         },
@@ -743,7 +728,7 @@ def lambda_handler(event, context):
                     "chat_room_id": chat_room_id,
                     "operator_id": operator_id,
                     "channel_id": uuid.UUID(channel_id),
-                    "last_message_content": last_message_content,
+                    "last_message_content": json.dumps(last_message_content),
                     "is_client": is_client
                 }
             }
