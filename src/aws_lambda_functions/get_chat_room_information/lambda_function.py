@@ -270,13 +270,6 @@ def get_client_data(**kwargs) -> None:
         genders.gender_id::text,
         genders.gender_technical_name::text,
         genders.gender_public_name::text,
-        countries.country_id::text,
-        countries.country_short_name::text,
-        countries.country_official_name::text,
-        countries.country_alpha_2_code::text,
-        countries.country_alpha_3_code::text,
-        countries.country_numeric_code::text,
-        countries.country_code_top_level_domain::text,
         case
             when users.identified_user_id is not null and users.unidentified_user_id is null
             then identified_users.metadata::text
@@ -307,8 +300,6 @@ def get_client_data(**kwargs) -> None:
         users.unidentified_user_id = unidentified_users.unidentified_user_id
     left join genders on
         identified_users.gender_id = genders.gender_id
-    left join countries on
-        identified_users.country_id = countries.country_id
     where
         chat_rooms_users_relationship.chat_room_id = %(chat_room_id)s
     and
@@ -372,13 +363,6 @@ def get_operators_data(**kwargs) -> None:
         aggregated_data.gender_id,
         aggregated_data.gender_technical_name,
         aggregated_data.gender_public_name,
-        aggregated_data.country_id,
-        aggregated_data.country_short_name,
-        aggregated_data.country_official_name,
-        aggregated_data.country_alpha_2_code,
-        aggregated_data.country_alpha_3_code,
-        aggregated_data.country_numeric_code,
-        aggregated_data.country_code_top_level_domain,
         aggregated_data.role_id,
         aggregated_data.role_technical_name,
         aggregated_data.role_public_name,
@@ -410,13 +394,6 @@ def get_operators_data(**kwargs) -> None:
             genders.gender_id::text,
             genders.gender_technical_name::text,
             genders.gender_public_name::text,
-            countries.country_id::text,
-            countries.country_short_name::text,
-            countries.country_official_name::text,
-            countries.country_alpha_2_code::text,
-            countries.country_alpha_3_code::text,
-            countries.country_numeric_code::text,
-            countries.country_code_top_level_domain::text,
             roles.role_id::text,
             roles.role_technical_name::text,
             roles.role_public_name::text,
@@ -438,8 +415,6 @@ def get_operators_data(**kwargs) -> None:
             users.internal_user_id = internal_users.internal_user_id
         left join genders on
             internal_users.gender_id = genders.gender_id
-        left join countries on
-            internal_users.country_id = countries.country_id
         left join roles on
             internal_users.role_id = roles.role_id
         left join organizations on
@@ -507,14 +482,12 @@ def analyze_and_format_operators_data(**kwargs) -> None:
     operators = []
     if operators_data:
         for entry in operators_data:
-            operator, gender, country, role, organization = {}, {}, {}, {}, {}
+            operator, gender, role, organization = {}, {}, {}, {}
             for key, value in entry.items():
                 if key.endswith("_date_time"):
                     value = value.isoformat()
                 if key.startswith("gender_"):
                     gender[utils.camel_case(key)] = value
-                elif key.startswith("country_"):
-                    country[utils.camel_case(key)] = value
                 elif key.startswith("role_"):
                     role[utils.camel_case(key)] = value
                 elif key.startswith("organization_"):
@@ -522,7 +495,6 @@ def analyze_and_format_operators_data(**kwargs) -> None:
                 else:
                     operator[utils.camel_case(key)] = value
             operator["gender"] = gender
-            operator["country"] = country
             operator["role"] = role
             operator["organization"] = organization
             operators.append(operator)
@@ -543,18 +515,15 @@ def analyze_and_format_client_data(**kwargs) -> None:
     # Format the client data.
     client = {}
     if client_data:
-        gender, country = {}, {}
+        gender = {}
         for key, value in client_data.items():
             if key.endswith("_date_time"):
                 value = value.isoformat()
             if key.startswith("gender_"):
                 gender[utils.camel_case(key)] = value
-            elif key.startswith("country_"):
-                country[utils.camel_case(key)] = value
             else:
                 client[utils.camel_case(key)] = value
         client["gender"] = gender
-        client["country"] = country
         chat_room["chatRoomClient"] = client
 
     # Return nothing.

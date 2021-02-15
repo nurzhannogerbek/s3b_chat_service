@@ -378,13 +378,6 @@ def get_operator_data(**kwargs) -> None:
         genders.gender_id::text,
         genders.gender_technical_name::text,
         genders.gender_public_name::text,
-        countries.country_id::text,
-        countries.country_short_name::text,
-        countries.country_official_name::text,
-        countries.country_alpha_2_code::text,
-        countries.country_alpha_3_code::text,
-        countries.country_numeric_code::text,
-        countries.country_code_top_level_domain::text,
         roles.role_id::text,
         roles.role_technical_name::text,
         roles.role_public_name::text,
@@ -404,8 +397,6 @@ def get_operator_data(**kwargs) -> None:
         users.internal_user_id = internal_users.internal_user_id
     left join genders on
         internal_users.gender_id = genders.gender_id
-    left join countries on
-        internal_users.country_id = countries.country_id
     left join roles on
         internal_users.role_id = roles.role_id
     left join organizations on
@@ -439,12 +430,10 @@ def analyze_and_format_operator_data(operator_data: Dict[AnyStr, Any]) -> Dict[A
     # Format the operator data.
     operator = {}
     if operator_data:
-        gender, country, role, organization = {}, {}, {}, {}
+        gender, role, organization = {}, {}, {}
         for key, value in operator_data.items():
             if key.startswith("gender_"):
                 gender[utils.camel_case(key)] = value
-            elif key.startswith("country_"):
-                country[utils.camel_case(key)] = value
             elif key.startswith("role_"):
                 role[utils.camel_case(key)] = value
             elif "organization" in key:
@@ -452,7 +441,6 @@ def analyze_and_format_operator_data(operator_data: Dict[AnyStr, Any]) -> Dict[A
             else:
                 operator[utils.camel_case(key)] = value
         operator["gender"] = gender
-        operator["country"] = country
         operator["role"] = role
         operator["organization"] = organization
 

@@ -334,13 +334,6 @@ def get_clients_data(**kwargs) -> None:
         genders.gender_id::text,
         genders.gender_technical_name::text,
         genders.gender_public_name::text,
-        countries.country_id::text,
-        countries.country_short_name::text,
-        countries.country_official_name::text,
-        countries.country_alpha_2_code::text,
-        countries.country_alpha_3_code::text,
-        countries.country_numeric_code::text,
-        countries.country_code_top_level_domain::text,
         case
             when users.identified_user_id is not null and users.unidentified_user_id is null
             then identified_users.metadata::text
@@ -369,8 +362,6 @@ def get_clients_data(**kwargs) -> None:
         users.unidentified_user_id = unidentified_users.unidentified_user_id
     left join genders on
         identified_users.gender_id = genders.gender_id
-    left join countries on
-        identified_users.country_id = countries.country_id
     where
         users.user_id in %(clients_ids)s;
     """
@@ -456,16 +447,13 @@ def analyze_and_format_clients_data(**kwargs) -> None:
     # Format the clients data.
     clients_storage = {}
     for client_data in clients_data:
-        client, gender, country = {}, {}, {}
+        client, gender = {}, {}
         for key, value in client_data.items():
             if key.startswith("gender_"):
                 gender[utils.camel_case(key)] = value
-            elif key.startswith("country_"):
-                country[utils.camel_case(key)] = value
             else:
                 client[utils.camel_case(key)] = value
         client["gender"] = gender
-        client["country"] = country
         clients_storage[client_data["user_id"]] = client
 
     # Put the result of the function in the queue.

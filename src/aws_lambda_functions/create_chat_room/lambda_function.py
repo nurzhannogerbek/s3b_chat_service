@@ -302,13 +302,6 @@ def get_client_data(**kwargs) -> None:
         genders.gender_id::text,
         genders.gender_technical_name::text,
         genders.gender_public_name::text,
-        countries.country_id::text,
-        countries.country_short_name::text,
-        countries.country_official_name::text,
-        countries.country_alpha_2_code::text,
-        countries.country_alpha_3_code::text,
-        countries.country_numeric_code::text,
-        countries.country_code_top_level_domain::text,
         case
             when users.identified_user_id is not null and users.unidentified_user_id is null
             then identified_users.metadata::text
@@ -337,8 +330,6 @@ def get_client_data(**kwargs) -> None:
         users.unidentified_user_id = unidentified_users.unidentified_user_id
     left join genders on
         identified_users.gender_id = genders.gender_id
-    left join countries on
-        identified_users.country_id = countries.country_id
     where
         users.user_id = %(client_id)s
     limit 1;
@@ -612,16 +603,12 @@ def analyze_and_format_client_data(**kwargs) -> None:
     client = {}
     if client_data:
         gender = {}
-        country = {}
         for key, value in client_data.items():
             if key.startswith("gender_"):
                 gender[utils.camel_case(key)] = value
-            elif key.startswith("country_"):
-                country[utils.camel_case(key)] = value
             else:
                 client[utils.camel_case(key)] = value
         client["gender"] = gender
-        client["country"] = country
 
     # Put the result of the function in the queue.
     queue.put({"client": client})

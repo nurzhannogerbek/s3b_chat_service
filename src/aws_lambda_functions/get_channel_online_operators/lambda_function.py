@@ -168,13 +168,6 @@ def get_operators_data(**kwargs) -> List:
         genders.gender_id::text,
         genders.gender_technical_name::text,
         genders.gender_public_name::text,
-        countries.country_id::text,
-        countries.country_short_name::text,
-        countries.country_official_name::text,
-        countries.country_alpha_2_code::text,
-        countries.country_alpha_3_code::text,
-        countries.country_numeric_code::text,
-        countries.country_code_top_level_domain::text,
         roles.role_id::text,
         roles.role_technical_name::text,
         roles.role_public_name::text,
@@ -202,8 +195,6 @@ def get_operators_data(**kwargs) -> List:
         internal_users.internal_user_id = users.internal_user_id
     left join genders on
         internal_users.gender_id = genders.gender_id
-    left join countries on
-        internal_users.country_id = countries.country_id
     left join roles on
         internal_users.role_id = roles.role_id
     where
@@ -242,12 +233,10 @@ def analyze_and_format_operators_data(**kwargs) -> List:
     operators = []
     if operators_data:
         for entry in operators_data:
-            operator, gender, country, role, organization = {}, {}, {}, {}, {}
+            operator, gender, role, organization = {}, {}, {}, {}
             for key, value in entry.items():
                 if key.startswith("gender_"):
                     gender[utils.camel_case(key)] = value
-                elif key.startswith("country_"):
-                    country[utils.camel_case(key)] = value
                 elif key.startswith("role_"):
                     role[utils.camel_case(key)] = value
                 elif key.startswith("organization_"):
@@ -255,7 +244,6 @@ def analyze_and_format_operators_data(**kwargs) -> List:
                 else:
                     operator[utils.camel_case(key)] = value
             operator["gender"] = gender
-            operator["country"] = country
             operator["role"] = role
             operator["organization"] = organization
             operators.append(operator)
