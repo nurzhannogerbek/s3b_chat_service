@@ -154,6 +154,7 @@ def get_operators_data(**kwargs) -> List:
     sql_statement = """
     select
         users.user_id::text,
+        users.user_nickname::text,
         internal_users.auth0_user_id::text,
         internal_users.auth0_metadata::text,
         internal_users.internal_user_first_name::text as user_first_name,

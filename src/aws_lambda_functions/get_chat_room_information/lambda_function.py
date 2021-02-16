@@ -227,6 +227,7 @@ def get_client_data(**kwargs) -> None:
             else 'unidentified_user'::text
         end as user_type,
         users.user_id::text,
+        users.user_nickname::text,
         case
             when users.identified_user_id is not null and users.unidentified_user_id is null
             then identified_users.identified_user_first_name::text
@@ -348,6 +349,7 @@ def get_operators_data(**kwargs) -> None:
     sql_statement = """
     select
         distinct on (aggregated_data.user_id) user_id,
+        aggregated_data.user_nickname,
         aggregated_data.chat_room_member_since_date_time,
         aggregated_data.auth0_user_id,
         aggregated_data.auth0_metadata,
@@ -379,6 +381,7 @@ def get_operators_data(**kwargs) -> None:
     from (
         select
             users.user_id::text user_id,
+            users.user_nickname::text,
             chat_rooms_users_relationship.entry_created_date_time as chat_room_member_since_date_time,
             internal_users.auth0_user_id::text,
             internal_users.auth0_metadata::text,

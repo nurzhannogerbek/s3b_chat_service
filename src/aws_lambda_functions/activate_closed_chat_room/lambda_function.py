@@ -274,6 +274,7 @@ def get_client_data(**kwargs) -> None:
             else 'unidentified_user'::text
         end as user_type,
         users.user_id::text,
+        users.user_nickname::text,
         case
             when users.identified_user_id is not null and users.unidentified_user_id is null
             then identified_users.identified_user_first_name::text

@@ -452,6 +452,7 @@ def get_operator_data(**kwargs) -> None:
         internal_users.auth0_user_id::text,
         internal_users.auth0_metadata::text,
         users.user_id::text,
+        users.user_nickname::text,
         internal_users.internal_user_first_name::text as user_first_name,
         internal_users.internal_user_last_name::text as user_last_name,
         internal_users.internal_user_middle_name::text as user_middle_name,
