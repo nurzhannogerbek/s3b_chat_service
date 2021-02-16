@@ -249,7 +249,7 @@ def get_client_data(**kwargs) -> None:
         end as user_primary_email,
         case
             when users.identified_user_id is not null and users.unidentified_user_id is null
-            then identified_users.identified_user_secondary_email::text
+            then identified_users.identified_user_secondary_email::text[]
             else null
         end as user_secondary_email,
         case
@@ -259,7 +259,7 @@ def get_client_data(**kwargs) -> None:
         end as user_primary_phone_number,
         case
             when users.identified_user_id is not null and users.unidentified_user_id is null
-            then identified_users.identified_user_secondary_phone_number::text
+            then identified_users.identified_user_secondary_phone_number::text[]
             else null
         end as user_secondary_phone_number,
         case
@@ -386,9 +386,9 @@ def get_operators_data(**kwargs) -> None:
             internal_users.internal_user_last_name::text as user_last_name,
             internal_users.internal_user_middle_name::text as user_middle_name,
             internal_users.internal_user_primary_email::text as user_primary_email,
-            internal_users.internal_user_secondary_email::text as user_secondary_email,
+            internal_users.internal_user_secondary_email::text[] as user_secondary_email,
             internal_users.internal_user_primary_phone_number::text as user_primary_phone_number,
-            internal_users.internal_user_secondary_phone_number::text as user_secondary_phone_number,
+            internal_users.internal_user_secondary_phone_number::text[] as user_secondary_phone_number,
             internal_users.internal_user_profile_photo_url::text as user_profile_photo_url,
             internal_users.internal_user_position_name::text as user_position_name,
             genders.gender_id::text,

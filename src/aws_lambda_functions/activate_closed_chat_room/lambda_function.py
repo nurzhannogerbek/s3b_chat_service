@@ -296,7 +296,7 @@ def get_client_data(**kwargs) -> None:
         end as user_primary_email,
         case
             when users.identified_user_id is not null and users.unidentified_user_id is null
-            then identified_users.identified_user_secondary_email::text
+            then identified_users.identified_user_secondary_email::text[]
             else null
         end as user_secondary_email,
         case
@@ -306,7 +306,7 @@ def get_client_data(**kwargs) -> None:
         end as user_primary_phone_number,
         case
             when users.identified_user_id is not null and users.unidentified_user_id is null
-            then identified_users.identified_user_secondary_phone_number::text
+            then identified_users.identified_user_secondary_phone_number::text[]
             else null
         end as user_secondary_phone_number,
         case
