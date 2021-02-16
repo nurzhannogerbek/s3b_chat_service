@@ -2,9 +2,10 @@ image:
   name: 'python:3.8'
 deploy:
   - step: &deploy
+      caches:
+        - pip
       script:
-        - apt-get update && apt-get install -y python3-pip
-        - pip3 install -U awscli
+        - pip install -U awscli==1.19.8
         - aws configure set default.region $AWS_DEFAULT_REGION
         - aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
         - aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
