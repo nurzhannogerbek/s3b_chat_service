@@ -3,50 +3,11 @@ image:
 deploy:
   - step: &deploy
       script:
-        - |
-          if [ $BITBUCKET_BRANCH == 'develop' ]; then
-            export CASSANDRA_USERNAME=$DEV_CASSANDRA_USERNAME
-            export CASSANDRA_PASSWORD=$DEV_CASSANDRA_PASSWORD
-            export CASSANDRA_HOST=$DEV_CASSANDRA_HOST
-            export CASSANDRA_PORT=$DEV_CASSANDRA_PORT
-            export CASSANDRA_LOCAL_DC=$DEV_CASSANDRA_LOCAL_DC
-            export CASSANDRA_KEYSPACE_NAME=$DEV_CASSANDRA_KEYSPACE_NAME
-            export POSTGRESQL_USERNAME=$DEV_POSTGRESQL_USERNAME
-            export POSTGRESQL_PASSWORD=$DEV_POSTGRESQL_PASSWORD
-            export POSTGRESQL_HOST=$DEV_POSTGRESQL_HOST
-            export POSTGRESQL_PORT=$DEV_POSTGRESQL_PORT
-            export POSTGRESQL_DB_NAME=$DEV_POSTGRESQL_DB_NAME
-            export S3_BUCKET='dev-3beep-chat-service'
-            export STACK_NAME='Dev3beepChatService'
-            export ENVIRONMENT_NAME='Dev'
-            export DATABASES_LAYER_NAME='DevDatabases'
-            export UTILS_LAYER_NAME='DevUtils'
-          fi
-        - |
-          if [ $BITBUCKET_BRANCH == 'master' ]; then
-            export CASSANDRA_USERNAME=$PROD_CASSANDRA_USERNAME
-            export CASSANDRA_PASSWORD=$PROD_CASSANDRA_PASSWORD
-            export CASSANDRA_HOST=$PROD_CASSANDRA_HOST
-            export CASSANDRA_PORT=$PROD_CASSANDRA_PORT
-            export CASSANDRA_LOCAL_DC=$PROD_CASSANDRA_LOCAL_DC
-            export CASSANDRA_KEYSPACE_NAME=$PROD_CASSANDRA_KEYSPACE_NAME
-            export POSTGRESQL_USERNAME=$PROD_POSTGRESQL_USERNAME
-            export POSTGRESQL_PASSWORD=$PROD_POSTGRESQL_PASSWORD
-            export POSTGRESQL_HOST=$PROD_POSTGRESQL_HOST
-            export POSTGRESQL_PORT=$PROD_POSTGRESQL_PORT
-            export POSTGRESQL_DB_NAME=$PROD_POSTGRESQL_DB_NAME
-            export S3_BUCKET='prod-3beep-chat-service'
-            export STACK_NAME='Prod3beepChatService'
-            export ENVIRONMENT_NAME='Prod'
-            export DATABASES_LAYER_NAME='ProdDatabases'
-            export UTILS_LAYER_NAME='ProdUtils'
-          fi
         - apt-get update && apt-get install -y python3-pip
         - pip3 install -U awscli
         - aws configure set default.region $AWS_DEFAULT_REGION
         - aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
         - aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
-        - aws s3 rm --recursive s3://$S3_BUCKET
         - >-
           export DATABASES_LAYER_ARN=$(aws lambda list-layer-versions
           --layer-name $DATABASES_LAYER_NAME --query 'max_by(LayerVersions,
@@ -132,6 +93,10 @@ deploy:
 pipelines:
   branches:
     develop:
-      - step: *deploy
+      - step:
+          <<: *deploy
+          deployment: develop
     master:
-      - step: *deploy
+      - step:
+          <<: *deploy
+          deployment: master
