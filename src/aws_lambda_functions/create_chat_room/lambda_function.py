@@ -260,6 +260,7 @@ def get_client_data(**kwargs) -> None:
         end as user_type,
         users.user_id::text,
         users.user_nickname::text,
+        users.user_profile_photo_url::text,
         case
             when users.identified_user_id is not null and users.unidentified_user_id is null
             then identified_users.identified_user_first_name::text
@@ -295,11 +296,6 @@ def get_client_data(**kwargs) -> None:
             then identified_users.identified_user_secondary_phone_number::text[]
             else null
         end as user_secondary_phone_number,
-        case
-            when users.identified_user_id is not null and users.unidentified_user_id is null
-            then identified_users.identified_user_profile_photo_url::text
-            else null
-        end as user_profile_photo_url,
         genders.gender_id::text,
         genders.gender_technical_name::text,
         genders.gender_public_name::text,

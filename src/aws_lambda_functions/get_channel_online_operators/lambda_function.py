@@ -155,6 +155,7 @@ def get_operators_data(**kwargs) -> List:
     select
         users.user_id::text,
         users.user_nickname::text,
+        users.user_profile_photo_url::text,
         internal_users.auth0_user_id::text,
         internal_users.auth0_metadata::text,
         internal_users.internal_user_first_name::text as user_first_name,
@@ -164,7 +165,6 @@ def get_operators_data(**kwargs) -> List:
         internal_users.internal_user_secondary_email::text[] as user_secondary_email,
         internal_users.internal_user_primary_phone_number::text as user_primary_phone_number,
         internal_users.internal_user_secondary_phone_number::text[] as user_secondary_phone_number,
-        internal_users.internal_user_profile_photo_url::text as user_profile_photo_url,
         internal_users.internal_user_position_name::text as user_position_name,
         genders.gender_id::text,
         genders.gender_technical_name::text,

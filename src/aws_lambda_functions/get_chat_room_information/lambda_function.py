@@ -228,6 +228,7 @@ def get_client_data(**kwargs) -> None:
         end as user_type,
         users.user_id::text,
         users.user_nickname::text,
+        users.user_profile_photo_url::text,
         case
             when users.identified_user_id is not null and users.unidentified_user_id is null
             then identified_users.identified_user_first_name::text
@@ -263,11 +264,6 @@ def get_client_data(**kwargs) -> None:
             then identified_users.identified_user_secondary_phone_number::text[]
             else null
         end as user_secondary_phone_number,
-        case
-            when users.identified_user_id is not null and users.unidentified_user_id is null
-            then identified_users.identified_user_profile_photo_url::text
-            else null
-        end as user_profile_photo_url,
         genders.gender_id::text,
         genders.gender_technical_name::text,
         genders.gender_public_name::text,
@@ -350,6 +346,7 @@ def get_operators_data(**kwargs) -> None:
     select
         distinct on (aggregated_data.user_id) user_id,
         aggregated_data.user_nickname,
+        aggregated_data.user_profile_photo_url,
         aggregated_data.chat_room_member_since_date_time,
         aggregated_data.auth0_user_id,
         aggregated_data.auth0_metadata,
@@ -360,7 +357,6 @@ def get_operators_data(**kwargs) -> None:
         aggregated_data.user_secondary_email,
         aggregated_data.user_primary_phone_number,
         aggregated_data.user_secondary_phone_number,
-        aggregated_data.user_profile_photo_url,
         aggregated_data.user_position_name,
         aggregated_data.gender_id,
         aggregated_data.gender_technical_name,
@@ -382,6 +378,7 @@ def get_operators_data(**kwargs) -> None:
         select
             users.user_id::text user_id,
             users.user_nickname::text,
+            users.user_profile_photo_url::text,
             chat_rooms_users_relationship.entry_created_date_time as chat_room_member_since_date_time,
             internal_users.auth0_user_id::text,
             internal_users.auth0_metadata::text,
@@ -392,7 +389,6 @@ def get_operators_data(**kwargs) -> None:
             internal_users.internal_user_secondary_email::text[] as user_secondary_email,
             internal_users.internal_user_primary_phone_number::text as user_primary_phone_number,
             internal_users.internal_user_secondary_phone_number::text[] as user_secondary_phone_number,
-            internal_users.internal_user_profile_photo_url::text as user_profile_photo_url,
             internal_users.internal_user_position_name::text as user_position_name,
             genders.gender_id::text,
             genders.gender_technical_name::text,
