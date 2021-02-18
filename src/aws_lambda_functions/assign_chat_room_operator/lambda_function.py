@@ -472,21 +472,14 @@ def get_operator_data(**kwargs) -> None:
         organizations.organization_id::text,
         organizations.organization_name::text,
         organizations.organization_level::smallint,
-        organizations.tree_organization_id::text,
-        organizations.tree_organization_name::text,
-        organizations.tree_organization_level::text,
         organizations.parent_organization_id::text,
         organizations.parent_organization_name::text,
         organizations.parent_organization_level::smallint,
-        organizations.tree_parent_organization_id::text,
-        organizations.tree_parent_organization_name::text,
-        organizations.tree_parent_organization_level::text,
         organizations.root_organization_id::text,
         organizations.root_organization_name::text,
         organizations.root_organization_level::smallint,
-        organizations.tree_root_organization_id::text,
-        organizations.tree_root_organization_name::text,
-        organizations.tree_root_organization_level::text
+        organizations.tree_organization_id::text,
+        organizations.tree_organization_name::text
     from
         users
     left join internal_users on
