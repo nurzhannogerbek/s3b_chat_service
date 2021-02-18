@@ -367,13 +367,22 @@ def get_operators_data(**kwargs) -> None:
         aggregated_data.role_description,
         aggregated_data.organization_id,
         aggregated_data.organization_name,
-        aggregated_data.organization_description,
+        aggregated_data.organization_level,
+        aggregated_data.tree_organization_id,
+        aggregated_data.tree_organization_name,
+        aggregated_data.tree_organization_level,
         aggregated_data.parent_organization_id,
         aggregated_data.parent_organization_name,
-        aggregated_data.parent_organization_description,
+        aggregated_data.parent_organization_level,
+        aggregated_data.tree_parent_organization_id,
+        aggregated_data.tree_parent_organization_name,
+        aggregated_data.tree_parent_organization_level,
         aggregated_data.root_organization_id,
         aggregated_data.root_organization_name,
-        aggregated_data.root_organization_description
+        aggregated_data.root_organization_level,
+        aggregated_data.tree_root_organization_id,
+        aggregated_data.tree_root_organization_name,
+        aggregated_data.tree_root_organization_level
     from (
         select
             users.user_id::text user_id,
@@ -399,13 +408,22 @@ def get_operators_data(**kwargs) -> None:
             roles.role_description::text,
             organizations.organization_id::text,
             organizations.organization_name::text,
-            organizations.organization_description::text,
+            organizations.organization_level::smallint,
+            organizations.tree_organization_id::text,
+            organizations.tree_organization_name::text,
+            organizations.tree_organization_level::text,
             organizations.parent_organization_id::text,
             organizations.parent_organization_name::text,
-            organizations.parent_organization_description::text,
+            organizations.parent_organization_level::smallint,
+            organizations.tree_parent_organization_id::text,
+            organizations.tree_parent_organization_name::text,
+            organizations.tree_parent_organization_level::text,
             organizations.root_organization_id::text,
             organizations.root_organization_name::text,
-            organizations.root_organization_description::text
+            organizations.root_organization_level::smallint,
+            organizations.tree_root_organization_id::text,
+            organizations.tree_root_organization_name::text,
+            organizations.tree_root_organization_level::text
         from
             chat_rooms_users_relationship
         left join users on
