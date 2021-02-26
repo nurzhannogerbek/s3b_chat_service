@@ -693,7 +693,7 @@ def lambda_handler(event, context):
     local_message_id = input_arguments["local_message_id"]
     last_message_content = {
         "messageText": message_text,
-        "messageContent": json.loads(message_content)
+        "messageContent": None if message_content is None else json.loads(message_content)
     }
     is_client = input_arguments["is_client"]
 
