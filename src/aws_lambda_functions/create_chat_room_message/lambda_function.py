@@ -120,7 +120,7 @@ def check_input_arguments(**kwargs) -> None:
     message_content = input_arguments.get("messageContent", None)
     try:
         quoted_message_id = input_arguments["quotedMessage"]["messageId"]
-    except KeyError:
+    except Exception:
         quoted_message_id = None
     if quoted_message_id is not None:
         try:
@@ -129,7 +129,7 @@ def check_input_arguments(**kwargs) -> None:
             raise Exception("The 'quotedMessageId' argument format is not UUID.")
     try:
         quoted_message_author_id = input_arguments["quotedMessage"]["messageAuthorId"]
-    except KeyError:
+    except Exception:
         quoted_message_author_id = None
     if quoted_message_author_id is not None:
         try:
@@ -138,7 +138,7 @@ def check_input_arguments(**kwargs) -> None:
             raise Exception("The 'quotedMessageAuthorId' argument format is not UUID.")
     try:
         quoted_message_channel_id = input_arguments["quotedMessage"]["messageChannelId"]
-    except KeyError:
+    except Exception:
         quoted_message_channel_id = None
     if quoted_message_channel_id is not None:
         try:
@@ -147,11 +147,11 @@ def check_input_arguments(**kwargs) -> None:
             raise Exception("The 'quotedMessageChannelId' argument format is not UUID.")
     try:
         quoted_message_text = input_arguments["quotedMessage"]["messageText"]
-    except KeyError:
+    except Exception:
         quoted_message_text = None
     try:
         quoted_message_content = input_arguments["quotedMessage"]["messageContent"]
-    except KeyError:
+    except Exception:
         quoted_message_content = None
     local_message_id = input_arguments.get("localMessageId", None)
     is_client = input_arguments.get("isClient", None)
