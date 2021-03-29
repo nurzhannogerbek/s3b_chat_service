@@ -350,7 +350,12 @@ def get_clients_data(**kwargs) -> None:
             when users.identified_user_id is not null and users.unidentified_user_id is null
             then identified_users.whatsapp_username::text
             else null
-        end as whatsapp_username
+        end as whatsapp_username,
+        case
+            when users.identified_user_id is not null and users.unidentified_user_id is null
+            then identified_users.instagram_private_username::text
+            else null
+        end as instagram_private_username
     from
         users
     left join identified_users on
