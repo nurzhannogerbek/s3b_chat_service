@@ -343,7 +343,12 @@ def get_client_data(**kwargs) -> None:
             when users.identified_user_id is not null and users.unidentified_user_id is null
             then identified_users.vk_user_id::text
             else null
-        end as vk_user_id
+        end as vk_user_id,
+        case
+            when users.identified_user_id is not null and users.unidentified_user_id is null
+            then identified_users.instagram_profile::text
+            else null
+        end as instagram_profile
     from
         users
     left join identified_users on

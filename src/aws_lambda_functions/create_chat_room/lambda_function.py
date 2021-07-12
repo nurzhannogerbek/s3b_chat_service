@@ -113,7 +113,8 @@ def check_input_arguments(**kwargs) -> None:
             "whatsapp_chat_id": input_arguments.get("whatsappChatId", None),
             "facebook_messenger_chat_id": input_arguments.get("facebookMessengerChatId", None),
             "instagram_private_chat_id": input_arguments.get("instagramPrivateChatId", None),
-            "vk_chat_id": input_arguments.get("vkChatId", None)
+            "vk_chat_id": input_arguments.get("vkChatId", None),
+            "instagram_chat_id": input_arguments.get("instagramChatId", None)
         }
     })
 
@@ -330,7 +331,12 @@ def get_client_data(**kwargs) -> None:
             when users.identified_user_id is not null and users.unidentified_user_id is null
             then identified_users.vk_user_id::text
             else null
-        end as vk_user_id
+        end as vk_user_id,
+        case
+            when users.identified_user_id is not null and users.unidentified_user_id is null
+            then identified_users.instagram_profile::text
+            else null
+        end as instagram_profile
     from
         users
     left join identified_users on
@@ -569,6 +575,16 @@ def add_chatbot_attributes(**kwargs) -> None:
             %(vk_chat_id)s
         );
         """
+    elif channel_type_name.lower() == "instagram".lower() and sql_arguments["instagram_chat_id"] is not None:
+        sql_statement = """
+        insert into instagram_chat_rooms (
+            chat_room_id,
+            instagram_chat_id
+        ) values (
+            %(chat_room_id)s,
+            %(instagram_chat_id)s
+        );
+        """
     else:
         return None
 
@@ -680,6 +696,7 @@ def lambda_handler(event, context):
     facebook_messenger_chat_id = input_arguments["facebook_messenger_chat_id"]
     instagram_private_chat_id = input_arguments["instagram_private_chat_id"]
     vk_chat_id = input_arguments["vk_chat_id"]
+    instagram_chat_id = input_arguments["instagram_chat_id"]
 
     # Define the instances of the database connections.
     postgresql_connection = results_of_tasks["postgresql_connection"]
@@ -802,7 +819,8 @@ def lambda_handler(event, context):
                     "whatsapp_chat_id": whatsapp_chat_id,
                     "facebook_messenger_chat_id": facebook_messenger_chat_id,
                     "instagram_private_chat_id": instagram_private_chat_id,
-                    "vk_chat_id": vk_chat_id
+                    "vk_chat_id": vk_chat_id,
+                    "instagram_chat_id": instagram_chat_id,
                 }
             }
         },
